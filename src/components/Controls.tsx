@@ -1,0 +1,14 @@
+import { useId } from 'react';
+import type { ReactNode } from 'react';
+export function Section({ title, number, children, defaultOpen=true }: {title:string;number?:string;children:ReactNode;defaultOpen?:boolean}) {
+  return <details className="control-section" open={defaultOpen}><summary><span>{number && <small>{number}</small>}{title}</span><span className="chevron">⌄</span></summary><div className="section-body">{children}</div></details>;
+}
+export function Slider({label,value,onChange,min,max,step=1,suffix=''}:{label:string;value:number;onChange:(v:number)=>void;min:number;max:number;step?:number;suffix?:string}) {
+  const id=useId();return <div className="slider-control"><div className="control-label"><label htmlFor={id}>{label}</label><span><input aria-label={`${label} value`} type="number" min={min} max={max} step={step} value={Number(value.toFixed(3))} onChange={e=>{if(e.target.value!==''&&Number.isFinite(e.target.valueAsNumber))onChange(Math.max(min,Math.min(max,e.target.valueAsNumber)));}}/>{suffix}</span></div><input id={id} type="range" min={min} max={max} step={step} value={value} onChange={e=>onChange(Number(e.target.value))} style={{'--fill':`${(value-min)/(max-min)*100}%`} as React.CSSProperties}/></div>;
+}
+export function Select({label,value,onChange,options}:{label:string;value:string;onChange:(v:string)=>void;options:readonly (string|readonly [string,string])[]}) {
+  const id=useId();return <div className="select-control"><label htmlFor={id}>{label}</label><select id={id} value={value} onChange={e=>onChange(e.target.value)}>{options.map(option=>{const [v,l]=typeof option==='string'?[option,option.charAt(0).toUpperCase()+option.slice(1)]:option;return <option key={v} value={v}>{l}</option>;})}</select></div>;
+}
+export function Color({label,value,onChange}:{label:string;value:string;onChange:(v:string)=>void}) {const id=useId();return <div className="color-control"><label htmlFor={id}>{label}</label><div><input id={id} aria-label={label} type="color" value={value} onChange={e=>onChange(e.target.value)}/><span>{value.toUpperCase()}</span></div></div>;}
+export function Toggle({label,value,onChange}:{label:string;value:boolean;onChange:(v:boolean)=>void}) {return <label className="toggle-control"><span>{label}</span><input type="checkbox" role="switch" checked={value} onChange={e=>onChange(e.target.checked)}/><span className="switch"/></label>;}
+export function NumberField({label,value,onChange,min,max,step=1,suffix}:{label:string;value:number;onChange:(v:number)=>void;min:number;max:number;step?:number;suffix?:string}) {const id=useId();return <label className="number-field" htmlFor={id}><span>{label}</span><div><input id={id} aria-label={label} type="number" min={min} max={max} step={step} value={value} onChange={e=>{if(e.target.value!==''&&Number.isFinite(e.target.valueAsNumber))onChange(Math.max(min,Math.min(max,e.target.valueAsNumber)));}}/>{suffix&&<small>{suffix}</small>}</div></label>;}
