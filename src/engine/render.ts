@@ -74,7 +74,7 @@ export function planGrid(tiles:Tile[],s:Settings):Tile[]{
     const whole={...source,sx:0,sy:0,sw:source.image.width,sh:source.image.height,turn:0};
     plan=Array.from({length:s.rows*s.columns},()=>whole);
   }else plan=s.distribution==='contour'?contourPlan(tiles,s):Array.from({length:s.rows*s.columns},(_,i)=>chooseTile(tiles,s,Math.floor(i/s.columns),i%s.columns));
-  if(s.multiscale){const magnifications=zoomGrid(s);plan=plan.map((tile,i)=>zoomTile(tile,magnifications[i],s));}
+  if(s.multiscale){const magnifications=zoomGrid(s);plan=plan.map((tile,i)=>zoomTile(tile,magnifications[i],s,Math.floor(i/s.columns),i%s.columns));}
   for(const pin of s.cellPins){
     const source=tiles.find(t=>t.sourceId===pin.sourceId);
     if(source&&pin.cell<plan.length)plan[pin.cell]={...source,sx:pin.sx*source.image.width,sy:pin.sy*source.image.height,sw:pin.sw*source.image.width,sh:pin.sh*source.image.height,turn:pin.turn};

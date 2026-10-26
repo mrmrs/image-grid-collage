@@ -1,5 +1,6 @@
 export type Distribution = 'random' | 'gradient' | 'radial' | 'noise' | 'color' | 'luminance' | 'checkerboard' | 'stripes' | 'ordered' | 'contour';
 export type ZoomDistribution = 'spiral'|'tiled-spiral'|'rings'|'radial'|'diagonal'|'rows'|'columns'|'checkerboard'|'sequence'|'noise'|'random';
+export type PositionDistribution = 'columns'|'rows'|'sequence'|'random'|'noise'|'spiral'|'tiled'|'fixed';
 export type MotionPattern = 'sweep' | 'ripple' | 'scatter' | 'flip' | 'slide';
 export type Mask = 'square' | 'circle' | 'diamond' | 'triangle' | 'hexagon' | 'arch' | 'mixed';
 export interface Ink { name: string; color: string; angle: number; density: number; enabled: boolean }
@@ -7,7 +8,8 @@ export interface CellPin { cell:number; sourceId:string; sx:number; sy:number; s
 export interface Settings {
   contourContinuity:number; contourBreaks:number; contourDiversity:number; contourCrop:number; contourTurn:number; cellPins:CellPin[];
   multiscale:boolean; multiscaleSource:string; multiscaleMode:'fragments'|'echo';
-  zoomLevels:number;zoomMin:number;zoomMax:number;zoomDistribution:ZoomDistribution;zoomRepeats:number;zoomTurns:number;zoomPhase:number;zoomReverse:boolean;zoomFocusX:number;zoomFocusY:number;
+  zoomLevels:number;zoomMin:number;zoomMax:number;zoomDistribution:ZoomDistribution;zoomRepeats:number;zoomTurns:number;zoomPhase:number;zoomReverse:boolean;
+  sourceXDistribution:PositionDistribution;sourceYDistribution:PositionDistribution;sourceXMin:number;sourceXMax:number;sourceYMin:number;sourceYMax:number;sourcePositionRepeats:number;sourcePositionPhase:number;sourceSnap:boolean;
   screenMode:'regular'|'contour'; flowStrength:number; flowSmoothing:number; flowLength:number; flowDivergence:number; flowAcrossCells:boolean;
   rows: number; columns: number; sourceRows: number; sourceColumns: number;
   gap: number; margin: number; background: string; distribution: Distribution;
@@ -28,7 +30,8 @@ export interface Preset { id: string; name: string; revisions: Revision[] }
 export const DEFAULTS: Settings = {
   contourContinuity:.85,contourBreaks:.08,contourDiversity:.35,contourCrop:.2,contourTurn:6,cellPins:[],
   multiscale:false,multiscaleSource:'',multiscaleMode:'echo',
-  zoomLevels:5,zoomMin:1,zoomMax:8,zoomDistribution:'spiral',zoomRepeats:3,zoomTurns:2,zoomPhase:0,zoomReverse:false,zoomFocusX:50,zoomFocusY:50,
+  zoomLevels:5,zoomMin:1,zoomMax:32,zoomDistribution:'spiral',zoomRepeats:3,zoomTurns:2,zoomPhase:0,zoomReverse:false,
+  sourceXDistribution:'columns',sourceYDistribution:'rows',sourceXMin:0,sourceXMax:100,sourceYMin:0,sourceYMax:100,sourcePositionRepeats:3,sourcePositionPhase:0,sourceSnap:true,
   screenMode:'regular',flowStrength:.65,flowSmoothing:2,flowLength:3,flowDivergence:.7,flowAcrossCells:true,
   rows: 8, columns: 8, sourceRows: 4, sourceColumns: 4, gap: 5, margin: 6,
   background: '#f2efe7', distribution: 'noise', seed: 2408, gradientAngle: 45, noiseScale: 3, chaos: 0.15,
@@ -50,8 +53,8 @@ export const DEFAULTS: Settings = {
 };
 export const STARTERS: { name: string; description: string; patch: Partial<Settings>; swatch: string }[] = [
   { name: 'Spiral zoom', description: 'One image · five magnifications', patch: {multiscale:true,rows:18,columns:18,gap:0,margin:4,zoomDistribution:'spiral'}, swatch:'field' },
-  { name: 'Modular zoom', description: 'Repeated spirals · six magnifications', patch: {multiscale:true,rows:24,columns:24,gap:2,margin:4,zoomDistribution:'tiled-spiral',zoomRepeats:3,zoomLevels:6,zoomMax:12}, swatch:'prisms' },
-  { name: 'Zoom terraces', description: 'Ordered bands of photographic scale', patch: {multiscale:true,rows:12,columns:12,gap:1,margin:4,zoomDistribution:'diagonal',zoomLevels:6,zoomMax:10}, swatch:'field' },
+  { name: 'Modular zoom', description: 'Repeated spirals · six magnifications', patch: {multiscale:true,rows:24,columns:24,gap:2,margin:4,zoomDistribution:'tiled-spiral',zoomRepeats:3,zoomLevels:6,zoomMax:64,sourceXDistribution:'tiled',sourceYDistribution:'tiled'}, swatch:'prisms' },
+  { name: 'Zoom terraces', description: 'Ordered bands of photographic scale', patch: {multiscale:true,rows:12,columns:12,gap:1,margin:4,zoomDistribution:'diagonal',zoomLevels:6,zoomMax:96,sourceXDistribution:'spiral',sourceYDistribution:'spiral'}, swatch:'field' },
   { name: 'Connected landscapes', description: 'Fragments follow their neighbors', patch: {distribution:'contour',rows:9,columns:9,gap:0,contourBreaks:.03}, swatch:'prisms' },
   { name: 'Contour engraving', description: 'Curved screens follow light and shade', patch: {halftone:true,screenMode:'contour',pattern:'lines',separation:'spot',rows:5,columns:5,gap:0,lpi:16,flowStrength:.75}, swatch:'duo' },
   { name: 'Field notes', description: 'An unexpected landscape', patch: {}, swatch: 'field' },
@@ -61,7 +64,9 @@ export const STARTERS: { name: string; description: string; patch: Partial<Setti
   { name: 'Press proof', description: 'Four-color dot screen', patch: { halftone: true, separation: 'cmyk', lpi: 22, rows: 5, columns: 5, gap: 3, distribution: 'ordered' }, swatch: 'press' },
 ];
 export const cloneSettings = (s: Settings): Settings => structuredClone(s);
-const enums: Record<string, string[]> = {
+export const settingEnums: Record<string, string[]> = {
+  sourceXDistribution:['columns','rows','sequence','random','noise','spiral','tiled','fixed'],
+  sourceYDistribution:['columns','rows','sequence','random','noise','spiral','tiled','fixed'],
   zoomDistribution:['spiral','tiled-spiral','rings','radial','diagonal','rows','columns','checkerboard','sequence','noise','random'],
   multiscaleMode:['fragments','echo'],screenMode:['regular','contour'],
   motionPattern: ['sweep','ripple','scatter','flip','slide'], motionGrouping: ['single','grouped','together'], motionDirection: ['forward','reverse'],
@@ -71,7 +76,7 @@ const enums: Record<string, string[]> = {
 };
 export const bounds: Record<string, [number, number]> = {
   contourContinuity:[0,1],contourBreaks:[0,1],contourDiversity:[0,1],contourCrop:[0,.5],contourTurn:[0,20],
-  zoomLevels:[1,16],zoomMin:[1,32],zoomMax:[1,32],zoomRepeats:[1,8],zoomTurns:[.25,6],zoomPhase:[0,1],zoomFocusX:[0,100],zoomFocusY:[0,100],
+  zoomLevels:[1,16],zoomMin:[1,256],zoomMax:[1,256],zoomRepeats:[1,8],zoomTurns:[.25,6],zoomPhase:[0,1],sourceXMin:[0,100],sourceXMax:[0,100],sourceYMin:[0,100],sourceYMax:[0,100],sourcePositionRepeats:[1,12],sourcePositionPhase:[0,1],
   flowStrength:[0,1],flowSmoothing:[.3,8],flowLength:[1,8],flowDivergence:[0,1],
   motionDuration: [.15,3], motionIntensity: [0,1], motionHold: [0,8], motionGroupSize: [2,64], motionOverlap: [0,.9], motionSeedStep: [1,10000],
   rows: [1,80], columns: [1,80], sourceRows: [1,24], sourceColumns: [1,24], gap: [0,50], margin: [0,30],
@@ -92,10 +97,10 @@ export function normalizeSettings(input: unknown): Settings {
     if (bounds[key]) {
       if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(`Invalid ${key}.`);
       let n = Math.min(bounds[key][1], Math.max(bounds[key][0], v));
-      if (['rows','columns','sourceRows','sourceColumns','seed','dpi','motionGroupSize','motionSeedStep','zoomLevels','zoomRepeats'].includes(key)) n = Math.round(n);
+      if (['rows','columns','sourceRows','sourceColumns','seed','dpi','motionGroupSize','motionSeedStep','zoomLevels','zoomRepeats','sourcePositionRepeats'].includes(key)) n = Math.round(n);
       (result as unknown as Record<string,unknown>)[key] = n;
-    } else if (enums[key]) {
-      if (!enums[key].includes(String(v))) throw new Error(`Unknown ${key}.`);
+    } else if (settingEnums[key]) {
+      if (!settingEnums[key].includes(String(v))) throw new Error(`Unknown ${key}.`);
       (result as unknown as Record<string,unknown>)[key] = v;
     } else if (key === 'multiscaleSource') {
       if(typeof v!=='string'||v.length>200)throw new Error('Invalid zoom image.');
@@ -124,6 +129,8 @@ export function normalizeSettings(input: unknown): Settings {
     } else throw new Error(`Invalid ${key}.`);
   }
   if(result.zoomMax<result.zoomMin)[result.zoomMin,result.zoomMax]=[result.zoomMax,result.zoomMin];
+  if(result.sourceXMax<result.sourceXMin)[result.sourceXMin,result.sourceXMax]=[result.sourceXMax,result.sourceXMin];
+  if(result.sourceYMax<result.sourceYMin)[result.sourceYMin,result.sourceYMax]=[result.sourceYMax,result.sourceYMin];
   return result;
 }
 export function exportDimensions(s: Settings) {

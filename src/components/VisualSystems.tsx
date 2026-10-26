@@ -1,6 +1,6 @@
 import type {Settings,SourceImage} from '../model';
 import {Section,Slider,Select,Toggle,NumberField} from './Controls';
-import {ZOOM_DISTRIBUTIONS,zoomLevelAt,zoomLevels} from '../engine/zoom';
+import {POSITION_DISTRIBUTIONS,ZOOM_DISTRIBUTIONS,zoomLevelAt,zoomLevels} from '../engine/zoom';
 
 type ControlsProps={settings:Settings;patch:(p:Partial<Settings>)=>void};
 export function MultiscaleControls({settings:s,patch,images}:{images:SourceImage[]}&ControlsProps){
@@ -15,14 +15,25 @@ export function MultiscaleControls({settings:s,patch,images}:{images:SourceImage
       {s.multiscaleMode==='echo'&&<><Select label="Zoom image" value={images.some(i=>i.id===s.multiscaleSource)?s.multiscaleSource:''} options={[["","First selected image"],...images.map(i=>[i.id,i.title] as const)]} onChange={multiscaleSource=>patch({multiscaleSource})}/>
       {image&&<div className="zoom-source"><img src={image.src} alt="Zoom source"/><span>{image.title}</span></div>}</>}
       <Slider label="Zoom levels" value={s.zoomLevels} onChange={zoomLevels=>patch({zoomLevels})} min={1} max={16}/>
-      <div className="two-columns"><NumberField label="Min zoom" value={s.zoomMin} min={1} max={32} step={.25} suffix="×" onChange={zoomMin=>patch({zoomMin,zoomMax:Math.max(zoomMin,s.zoomMax)})}/><NumberField label="Max zoom" value={s.zoomMax} min={1} max={32} step={.25} suffix="×" onChange={zoomMax=>patch({zoomMax,zoomMin:Math.min(zoomMax,s.zoomMin)})}/></div>
+      <div className="two-columns"><NumberField label="Min zoom" value={s.zoomMin} min={1} max={256} step={.25} suffix="×" onChange={zoomMin=>patch({zoomMin,zoomMax:Math.max(zoomMin,s.zoomMax)})}/><NumberField label="Max zoom" value={s.zoomMax} min={1} max={256} step={.25} suffix="×" onChange={zoomMax=>patch({zoomMax,zoomMin:Math.min(zoomMax,s.zoomMin)})}/></div>
       <Select label="Zoom distribution" value={s.zoomDistribution} options={ZOOM_DISTRIBUTIONS.map(d=>[d.id,d.label] as const)} onChange={zoomDistribution=>patch({zoomDistribution:zoomDistribution as Settings['zoomDistribution']})}/>
       {['spiral','tiled-spiral'].includes(s.zoomDistribution)&&<Slider label="Spiral turns" value={s.zoomTurns} onChange={zoomTurns=>patch({zoomTurns})} min={.25} max={6} step={.25}/>}
       {['tiled-spiral','rings','noise'].includes(s.zoomDistribution)&&<Slider label={s.zoomDistribution==='tiled-spiral'?'Modules per side':s.zoomDistribution==='rings'?'Ring repeats':'Zoom noise frequency'} value={s.zoomRepeats} onChange={zoomRepeats=>patch({zoomRepeats})} min={1} max={8}/>}
       {periodic&&<Slider label="Pattern phase" value={s.zoomPhase} onChange={zoomPhase=>patch({zoomPhase})} min={0} max={1} step={.01}/>}
       <Toggle label="Reverse zoom order" value={s.zoomReverse} onChange={zoomReverse=>patch({zoomReverse})}/>
       <figure className="zoom-map"><svg viewBox={`0 0 ${s.columns} ${s.rows}`} role="img" aria-label="Zoom placement map: lighter cells have more magnification" preserveAspectRatio="xMidYMid meet">{paths.map((d,i)=><path key={i} d={d} fill={`hsl(80 9% ${23+65*i/Math.max(1,levels.length-1)}%)`}/>)}</svg><figcaption>{levels.map((z,i)=><span key={i}>{Number(z.toFixed(2))}×</span>)}</figcaption></figure>
-      <details className="zoom-focus"><summary>Crop focus</summary><Slider label="Focus X" value={s.zoomFocusX} onChange={zoomFocusX=>patch({zoomFocusX})} min={0} max={100} suffix="%"/><Slider label="Focus Y" value={s.zoomFocusY} onChange={zoomFocusY=>patch({zoomFocusY})} min={0} max={100} suffix="%"/></details>
+      <div className="source-positions"><h3>Source positions</h3>
+        <Select label="Source X distribution" value={s.sourceXDistribution} options={POSITION_DISTRIBUTIONS} onChange={sourceXDistribution=>patch({sourceXDistribution:sourceXDistribution as Settings['sourceXDistribution']})}/>
+        <Select label="Source Y distribution" value={s.sourceYDistribution} options={POSITION_DISTRIBUTIONS} onChange={sourceYDistribution=>patch({sourceYDistribution:sourceYDistribution as Settings['sourceYDistribution']})}/>
+        <Toggle label="Snap to source cells" value={s.sourceSnap} onChange={sourceSnap=>patch({sourceSnap})}/>
+        {s.sourceSnap&&<div className="two-columns"><NumberField label="Source columns" value={s.sourceColumns} min={1} max={24} onChange={v=>patch({sourceColumns:Math.round(v)})}/><NumberField label="Source rows" value={s.sourceRows} min={1} max={24} onChange={v=>patch({sourceRows:Math.round(v)})}/></div>}
+        {[s.sourceXDistribution,s.sourceYDistribution].some(d=>['spiral','tiled','noise'].includes(d))&&<Slider label="Position repeats" value={s.sourcePositionRepeats} onChange={sourcePositionRepeats=>patch({sourcePositionRepeats})} min={1} max={12}/>}
+        {[s.sourceXDistribution,s.sourceYDistribution].some(d=>!['fixed','random'].includes(d))&&<Slider label="Position phase" value={s.sourcePositionPhase} onChange={sourcePositionPhase=>patch({sourcePositionPhase})} min={0} max={1} step={.01}/>}
+        <details className="zoom-focus"><summary>Source coordinate range</summary>
+          {(['X','Y'] as const).map(axis=>{const minKey=axis==='X'?'sourceXMin':'sourceYMin',maxKey=axis==='X'?'sourceXMax':'sourceYMax';return <div className="two-columns" key={axis}><NumberField label={`Source ${axis} min`} value={s[minKey]} min={0} max={100} suffix="%" onChange={v=>patch({[minKey]:v,[maxKey]:Math.max(v,s[maxKey])})}/><NumberField label={`Source ${axis} max`} value={s[maxKey]} min={0} max={100} suffix="%" onChange={v=>patch({[maxKey]:v,[minKey]:Math.min(v,s[minKey])})}/></div>;})}
+        </details>
+        <p className="control-hint">Each output cell samples its own source position. X and Y choose where; zoom chooses how close. Fixed position uses the midpoint of its range.{s.multiscaleMode==='fragments'?' Positions are relative to each selected fragment.':''}</p>
+      </div>
       <p className="control-hint">1× fills the cell; higher levels crop closer. Levels are evenly spaced by ratio.{s.zoomLevels===1?' One level uses Min zoom.':''}{s.cellPins.length?' Pinned crops retain their zoom.':''}</p>
     </>}
   </Section>;

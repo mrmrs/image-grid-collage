@@ -60,7 +60,7 @@ Hosting shares the application and bundled image library. Uploaded images and pr
 - Ten arrangements: connected contours, random, linear gradient, radial gradient, smooth noise, color selection, luminance, checkerboard, stripes, and sequential. Color and luminance modes choose fragments by their sampled colors; other modes choose images first, then their fragments. Source ordering follows library order.
 - Seven mask choices: square, circle, diamond, triangle, hexagon, arch, or a deterministic mixture.
 - Scale cells uniformly, randomly, with coherent noise, or with a gradient. Add rotation, random rotation, and mirroring. Scale above 1 and rotation intentionally permit overlapping cells.
-- The **seed** controls all randomness. Regenerate changes only the seed. Rendering is deterministic for the same recipe and source images (minor rasterization differences between browsers are possible).
+- The **seed** controls all randomness. **Regenerate** randomizes visual and motion parameters across the composition, zoom, source positions, masks, color, and print screens. Print dimensions, DPI, and selected images stay fixed. It releases pins because the grid itself can change. **Undo regenerate** restores the previous settings; **New seed** in the sidebar varies only the current recipe. Rendering is deterministic for the same recipe and source images (minor rasterization differences between browsers are possible).
 
 ## Connected contours
 
@@ -68,19 +68,21 @@ Choose **Compose → Distribution → Connected contours**, or load **Connected 
 
 **Deliberate breaks** controls how often a cell ignores edge matching. **Source diversity** discourages the same source in neighboring cells. This is an approximate visual solver; it connects compatible photographic structures without recognizing objects or guaranteeing perfect seams. Square masks and small gaps give the strongest connections. Global rotation, mirroring, and scale variation remain available and can break those connections intentionally.
 
-Use **Pin fragments**, then click cells to lock/unlock their crops. Keyboard users can focus the grid, use arrow keys to choose a cell, and press Enter or Space. Pins constrain subsequent contour choices, survive regeneration and preset saves, and are also honored by other arrangements. Changing output grid dimensions releases pins. Pins referencing deselected images are inactive until those images are selected again.
+Use **Pin fragments**, then click cells to lock/unlock their crops. Keyboard users can focus the grid, use arrow keys to choose a cell, and press Enter or Space. Pins constrain subsequent contour choices, survive New seed and preset saves, and are also honored by other arrangements. Changing output grid dimensions releases pins. Pins referencing deselected images are inactive until those images are selected again.
 
 ## Cell zoom
 
 Load **Spiral zoom**, **Modular zoom**, or **Zoom terraces** from Presets. In **Compose → Cell zoom**, choose a single image or apply magnifications to the selected fragments. This changes only the photographic crop: it adds no tone blending, contrast adjustment, or distant-image overlay. Masks and print screens can be combined with zoom independently.
 
-Set **Zoom levels** (1–16), **Min zoom**, and **Max zoom** (1×–32×). 1× covers the cell; larger values crop closer. Levels are evenly spaced by ratio, so three levels between 1× and 4× are 1×, 2×, and 4×. One level uses Min zoom. **Crop focus** controls the shared focal point within each image or fragment.
+Set **Zoom levels** (1–16), **Min zoom**, and **Max zoom** (1×–256×). 1× covers the cell; larger values crop closer. Levels are evenly spaced by ratio, so three levels between 1× and 4× are 1×, 2×, and 4×. One level uses Min zoom. The default range is 1×–32×, and the modular/terrace starters extend to 64× and 96×. At extreme magnification, small source details become broad areas of color; source resolution limits detail.
 
 Eleven distributions arrange these levels: spiral, tiled spirals, concentric rings, center outward, diagonal steps, row steps, column steps, alternating levels, repeating sequence, smooth noise, and random. Spirals offer turns and phase controls; tiled spirals repeat a shared module across the grid. Rings have repeat and phase controls. Reverse the zoom order to invert any pattern. The small zoom map shows placement, with lighter cells representing higher magnification.
 
-The seed shifts spiral/ring phase and changes noise/random patterns, including during motion. Ordered bands and alternating patterns retain their structure when regenerated. Image selection remains independent: **Selected fragments** uses the normal arrangement first, then applies the zoom field. Contour matches may be disrupted by the resulting crops. Pinned cells retain their exact crops and magnification.
+**Source positions** independently determines where each crop is centered. Choose an X distribution and a Y distribution: across columns, across rows, scan source grid, random, smooth noise, spiral path, repeated modules, or fixed position. Mix different patterns on the two axes. Position repeats and phase control the paths independently of zoom. Source coordinate ranges restrict the sampled area; fixed position uses the midpoint of its range. **Snap to source cells** uses the centers of the source slicing grid; turn it off for continuous coordinates. Zoom remains anchored to that source position, shifting only when necessary to keep the crop inside the image. With Selected fragments, positions are relative to each fragment.
 
-Zoom settings are saved in preset versions and backups. Older multi-scale recipes migrate their level count and magnification range where available; the previous frequency-blending effects are removed. If the chosen single image is deselected, the first selected image is used until that source returns.
+The seed shifts spiral/ring phase and changes noise/random patterns, including during motion. Ordered bands and alternating patterns retain their structure with New seed. Full Regenerate chooses a new layout and settings. Image selection remains independent: **Selected fragments** uses the normal arrangement first, then applies the zoom field. Contour matches may be disrupted by the resulting crops. Pinned cells retain their exact crops and magnification.
+
+Zoom settings are saved in preset versions and backups. Older multi-scale recipes migrate their level count and magnification range where available; the previous frequency-blending effects are removed. Recipes with the retired shared Crop focus receive the new spatial source-position defaults. If the chosen single image is deselected, the first selected image is used until that source returns.
 
 ## Presets and backups
 
@@ -144,7 +146,8 @@ The composite is an RGB proof, not a CMYK TIFF. There is no embedded ICC profile
 
 - `src/model.ts`: settings schema, bounds, defaults, and starter recipes.
 - `src/engine/contours.ts`: bounded contour analysis, neighbor matching, and pinned constraints.
-- `src/engine/zoom.ts`: discrete spatial zoom fields and photographic crops.
+- `src/engine/zoom.ts`: independent zoom and source-coordinate fields, snapping, and anchored photographic crops.
+- `src/engine/regenerate.ts`: reproducible parameter randomization with fixed print specifications and source selections.
 - `src/engine/analysis.ts`: resolution-independent image analysis for contour screens.
 - `src/engine/flow.ts`: continuous, image-driven screen displacement.
 - `src/components/VisualSystems.tsx`: controls for contour composition, cell zoom, and contour screens.

@@ -42,10 +42,46 @@ export function zoomGrid(s:Settings){
   const levels=zoomLevels(s);
   return Array.from({length:s.rows*s.columns},(_,i)=>levels[zoomLevelAt(s,Math.floor(i/s.columns),i%s.columns)]);
 }
-/** Focus is normalized within the source crop. At 1× the source covers the cell at the chosen focus. */
-export function zoomTile(tile:Tile,zoom:number,s:Settings):Tile{
+export const POSITION_DISTRIBUTIONS = [
+  ['columns','Across columns'],['rows','Across rows'],['sequence','Scan source grid'],
+  ['random','Random'],['noise','Smooth noise'],['spiral','Spiral path'],
+  ['tiled','Repeated modules'],['fixed','Fixed position'],
+] as const;
+/** Independent spatial fields locate crop centers within the source, before magnification. */
+export function sourcePositionAt(s:Settings,row:number,col:number):[number,number]{
+  const x=(col+.5)/s.columns,y=(row+.5)/s.rows,index=row*s.columns+col;
+  const phase=s.sourcePositionPhase,repeats=s.sourcePositionRepeats;
+  const t=(index+.5)/(s.rows*s.columns),angle=(t*repeats+phase)*Math.PI*2,radius=.5*Math.sqrt(t);
+  const axis=(axis:0|1)=>{
+    const mode=axis===0?s.sourceXDistribution:s.sourceYDistribution;
+    const n=axis===0?s.sourceColumns:s.sourceRows;
+    let value=.5;
+    switch(mode){
+      case 'columns':value=fract(x+phase);break;
+      case 'rows':value=fract(y+phase);break;
+      case 'sequence':{
+        const cell=(index+Math.floor(phase*s.sourceColumns*s.sourceRows))%(s.sourceColumns*s.sourceRows);
+        value=axis===0?(cell%s.sourceColumns+.5)/s.sourceColumns:(Math.floor(cell/s.sourceColumns)+.5)/s.sourceRows;break;
+      }
+      case 'random':value=random(s.seed,index,83+axis);break;
+      case 'noise':value=noise(x*repeats+phase*4,y*repeats+phase*4,s.seed+809+axis*131);break;
+      case 'spiral':value=.5+radius*(axis===0?Math.cos(angle):Math.sin(angle));break;
+      case 'tiled':value=fract((axis===0?x:y)*repeats+phase);break;
+      case 'fixed':value=.5;break;
+    }
+    const low=(axis===0?s.sourceXMin:s.sourceYMin)/100,high=(axis===0?s.sourceXMax:s.sourceYMax)/100;
+    const position=low+(high-low)*clamp(value);
+    // Restrict snapping to cell centers inside the requested range; narrow ranges remain continuous.
+    const first=Math.max(0,Math.ceil(low*n-.5)),last=Math.min(n-1,Math.floor(high*n-.5));
+    return s.sourceSnap&&first<=last?(Math.max(first,Math.min(last,Math.floor(position*n)))+.5)/n:position;
+  };
+  return [axis(0),axis(1)];
+}
+/** Anchor each crop on a source location, preserving that center as magnification changes. */
+export function zoomTile(tile:Tile,zoom:number,s:Settings,row=0,col=0):Tile{
   const margin=Math.min(s.width,s.height)*s.margin/100;
   const aspect=((s.width-2*margin)/s.columns)/((s.height-2*margin)/s.rows);
   const sw=Math.min(tile.sw,tile.sh*aspect)/zoom,sh=sw/aspect;
-  return {...tile,sx:tile.sx+(tile.sw-sw)*s.zoomFocusX/100,sy:tile.sy+(tile.sh-sh)*s.zoomFocusY/100,sw,sh};
+  const [x,y]=sourcePositionAt(s,row,col);
+  return {...tile,sx:tile.sx+Math.max(0,Math.min(tile.sw-sw,x*tile.sw-sw/2)),sy:tile.sy+Math.max(0,Math.min(tile.sh-sh,y*tile.sh-sh/2)),sw,sh};
 }
