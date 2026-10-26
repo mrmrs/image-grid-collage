@@ -2,7 +2,7 @@ import {bounds,cloneSettings,DEFAULTS,normalizeSettings,settingEnums} from '../m
 import type {Settings} from '../model';
 import {random} from './math';
 
-/** A reproducible new recipe. Physical output and the user's source collection stay fixed. */
+/** A reproducible new recipe. Paper color, physical output and the user's source collection stay fixed. */
 export function regenerateSettings(current:Settings,seed:number):Settings{
   let channel=0;
   const r=()=>random(seed,channel++,97);
@@ -10,7 +10,7 @@ export function regenerateSettings(current:Settings,seed:number):Settings{
   const pick=<T,>(values:readonly T[]):T=>values[Math.floor(r()*values.length)];
   const color=()=>`#${Math.floor(r()*0x1000000).toString(16).padStart(6,'0')}`;
   const next=cloneSettings(current),values=next as unknown as Record<string,unknown>;
-  const fixed=new Set(['width','height','dpi','selectedIds','cellPins','inks','spotInks','multiscaleSource']);
+  const fixed=new Set(['background','width','height','dpi','selectedIds','cellPins','inks','spotInks','multiscaleSource']);
   for(const key of Object.keys(DEFAULTS)){
     if(fixed.has(key))continue;
     if(settingEnums[key])values[key]=pick(settingEnums[key]);
@@ -24,7 +24,7 @@ export function regenerateSettings(current:Settings,seed:number):Settings{
     sourceRows:pick([2,3,4,6,8,12]),sourceColumns:pick([2,3,4,6,8,12]),
     gap:pick([0,0,1,2,4,8]),margin:pick([0,2,4,6,8]),
     scale:between(.8,1.15),variation:between(.05,.5),rotation:pick([0,0,0,45,90,-45]),rotationJitter:pick([0,0,3,8,15]),
-    saturation:between(.85,1.2),contrast:between(.85,1.2),background:pick(['#f2efe7','#f8f7f3','#151b1a',color()]),
+    saturation:between(.85,1.2),contrast:between(.85,1.2),
     multiscale:r()<.85,multiscaleMode:pick(['echo','echo','fragments']),multiscaleSource:pick(current.selectedIds)??'',
     zoomMin:pick([1,1,1,1.5,2]),zoomMax:pick([16,32,64,128,256,512,1024]),zoomLevels:pick([2,3,4,5,6,8]),
     sourceXMin:between(0,25),sourceXMax:between(75,100),sourceYMin:between(0,25),sourceYMax:between(75,100),
