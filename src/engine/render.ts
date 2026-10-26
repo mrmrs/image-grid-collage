@@ -1,5 +1,5 @@
 import type { Settings, SourceImage, Ink, Mask, CellPin } from '../model';
-import { random, noise, clamp, rgb, cmyk, screenThreshold } from './math';
+import { random, noise, clamp, rgb, screenThreshold } from './math';
 import { contourPlan } from './contours';
 import { zoomGrid,zoomTile } from './zoom';
 import { buildFlowField, flowDisplacement } from './flow';
@@ -122,16 +122,23 @@ export function separate(image:ImageData,s:Settings):Plate[] {
   const spacing=image.width/(s.width*s.lpi);
   const flow=s.screenMode==='contour'&&s.flowStrength>0?buildFlowField(image,s):null;
   const angles=inks.map(ink=>{const a=ink.angle*(flow?s.flowDivergence:1)*Math.PI/180;return [Math.cos(a)/spacing,Math.sin(a)/spacing];});
+  // Reuse scratch storage instead of allocating several arrays for every pixel.
+  const tones=new Float64Array(inks.length),weights=new Float64Array(inks.length);
+  const inkDarkness=colors.map(c=>Math.max(.15,1-(.2126*c[0]+.7152*c[1]+.0722*c[2])));
   for(let y=0;y<image.height;y++)for(let x=0;x<image.width;x++) {
     const p=y*image.width+x,k=p*4,r=image.data[k]/255,g=image.data[k+1]/255,b=image.data[k+2]/255;
     const displacement=flow?flowDisplacement(flow,(x+.5)/image.width,(y+.5)/image.height,s):0;
-    let tones:number[];
-    if(s.separation==='cmyk')tones=cmyk(r,g,b,s.blackGeneration);
+    if(s.separation==='cmyk'){
+      const black=(1-Math.max(r,g,b))*s.blackGeneration,d=1-black;
+      if(d<1e-8){tones[0]=tones[1]=tones[2]=0;tones[3]=1;}
+      else {tones[0]=(1-r-black)/d;tones[1]=(1-g-black)/d;tones[2]=(1-b-black)/d;tones[3]=black;}
+    }
     else {
       // Soft palette assignment, with paper preserved through luminance coverage.
-      const weights=colors.map(c=>1/(.015+(r-c[0])**2+(g-c[1])**2+(b-c[2])**2));
-      const total=weights.reduce((a,b)=>a+b,0),darkness=1-(.2126*r+.7152*g+.0722*b);
-      tones=weights.map((w,i)=>clamp(w/total*darkness/Math.max(.15,1-(.2126*colors[i][0]+.7152*colors[i][1]+.0722*colors[i][2]))));
+      let total=0;
+      for(let i=0;i<colors.length;i++){const c=colors[i];weights[i]=1/(.015+(r-c[0])**2+(g-c[1])**2+(b-c[2])**2);total+=weights[i];}
+      const darkness=1-(.2126*r+.7152*g+.0722*b);
+      for(let i=0;i<colors.length;i++)tones[i]=clamp(weights[i]/total*darkness/inkDarkness[i]);
     }
     for(let c=0;c<inks.length;c++) {
       const raw=tones[c],tone=clamp((raw+s.gain*4*raw*(1-raw))*inks[c].density),[cos,sin]=angles[c];
@@ -145,7 +152,11 @@ export function compositePlates(plates:Plate[],width:number,height:number,solo=-
   plates.forEach(({ink,coverage},index)=>{
     if(solo>=0?index!==solo:!ink.enabled)return;
     const color=solo>=0?[0,0,0]:rgb(ink.color);
-    for(let p=0;p<coverage.length;p++)if(coverage[p]){for(let c=0;c<3;c++)data[p*4+c]=Math.round(data[p*4+c]*color[c]/255);}
+    // These 256-entry tables are exactly the same multiply-and-round operation.
+    const red=Uint8Array.from({length:256},(_,v)=>Math.round(v*color[0]/255));
+    const green=Uint8Array.from({length:256},(_,v)=>Math.round(v*color[1]/255));
+    const blue=Uint8Array.from({length:256},(_,v)=>Math.round(v*color[2]/255));
+    for(let p=0;p<coverage.length;p++)if(coverage[p]){const k=p*4;data[k]=red[data[k]];data[k+1]=green[data[k+1]];data[k+2]=blue[data[k+2]];}
   });
   return new ImageData(data,width,height);
 }

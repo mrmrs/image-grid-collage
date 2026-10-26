@@ -15,6 +15,8 @@
     "deploy": "npm run build && wrangler deploy",
     "deploy:check": "npm run build && wrangler deploy --dry-run",
     "assets:brand": "node scripts/generate-brand-assets.mjs",
+    "test:regenerate": "node tests/regenerate-check.mjs",
+    "bench:regenerate": "node tests/regenerate-perf.mjs",
     "test:weave": "node tests/weave-check.mjs",
     "test:library": "node tests/library-brand-check.mjs"
   },

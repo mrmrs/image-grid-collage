@@ -8,11 +8,13 @@ import { readSession, writeSession, download, fileDataUrl } from './storage';
 
 import { useGridMotion } from './motion/useGridMotion';
 import { regenerateSettings } from './engine/regenerate';
+import { PreviewQueue } from './engine/previewQueue';
 import { artworkKey } from './motion/timing';
 import './motion/style.css';
 const MotionPanel=lazy(()=>import('./components/MotionPanel').then(m=>({default:m.MotionPanel})));
 
 type Tab='compose'|'motion'|'print'|'presets';
+type PreviewRequest={id:number;mode:'preview';renderKey:string;settings:Settings;sources:SourceImage[];solo:number;previewWidth:number};
 function Modal({title,children,onClose}:{title:string;children:React.ReactNode;onClose:()=>void}) {
   const ref=useRef<HTMLDialogElement>(null);
   useEffect(()=>{ref.current?.showModal();},[]);
@@ -31,6 +33,7 @@ export default function App(){
   const [beforeRegenerate,setBeforeRegenerate]=useState<Settings|null>(null);
   const [saveStatus,setSaveStatus]=useState('Saved locally');
   const canvasRef=useRef<HTMLCanvasElement>(null),complementRef=useRef<HTMLCanvasElement>(null),workerRef=useRef<Worker|null>(null),exportWorker=useRef<Worker|null>(null),jobRef=useRef(0);
+  const previewQueue=useRef<PreviewQueue<PreviewRequest>|null>(null),immediatePreview=useRef(false);
   const fileRef=useRef<HTMLInputElement>(null),importRef=useRef<HTMLInputElement>(null);
   const allImages=useMemo(()=>[...library,...uploads],[library,uploads]);
   const selected=useMemo(()=>allImages.filter(i=>settings.selectedIds.includes(i.id)),[allImages,settings.selectedIds]);
@@ -63,9 +66,11 @@ export default function App(){
   },[settings,uploads,presets,activePreset,activeRevision,ready]);
   useEffect(()=>{
     const worker=new Worker(new URL('./engine/worker.ts',import.meta.url),{type:'module'});workerRef.current=worker;
+    previewQueue.current=new PreviewQueue(request=>worker.postMessage(request));
     worker.onmessage=e=>{
       const {id,bitmap,complement,error:message}=e.data;
       if(id<0)return; // Motion player owns these responses.
+      previewQueue.current?.complete(id);
       if(id!==jobRef.current){bitmap?.close();complement?.close();return;}
       cellPlan.current=e.data.cells??[];setRenderedKey(e.data.renderKey??'');
       setRendering(false);if(message){setError(message);return;}
@@ -75,15 +80,18 @@ export default function App(){
       }
     };
     worker.onerror=e=>{setError(`Preview failed: ${e.message}`);setRendering(false);};
-    return()=>{worker.terminate();exportWorker.current?.terminate();};
+    return()=>{previewQueue.current=null;worker.terminate();exportWorker.current?.terminate();};
   },[]);
   useEffect(()=>{
     if(!ready)return;
     const id=++jobRef.current;
+    previewQueue.current?.clearPending();
+    const immediate=immediatePreview.current;immediatePreview.current=false;
     if(!selected.length){setRendering(false);const c=canvasRef.current;c?.getContext('2d')?.clearRect(0,0,c.width,c.height);return;}
     setRendering(true);
-    const timer=setTimeout(()=>{workerRef.current?.postMessage({id,mode:'preview',renderKey:previewKey+':'+solo,settings,sources:selected,solo,previewWidth:Math.min(1200,Math.round(1200*settings.width/settings.height))});},100);
-    return()=>clearTimeout(timer);
+    const submit=()=>previewQueue.current?.submit({id,mode:'preview',renderKey:previewKey+':'+solo,settings,sources:selected,solo,previewWidth:Math.min(1200,Math.round(1200*settings.width/settings.height))});
+    if(immediate){submit();return;}
+    const timer=setTimeout(submit,100);return()=>clearTimeout(timer);
   },[previewKey,selected,solo,ready]);
   function applyStarter(index:number){setBeforeRegenerate(null);const starter=STARTERS[index];setSettings({...cloneSettings(DEFAULTS),...starter.patch,selectedIds:starter.patch.selectedIds??settings.selectedIds});setActivePreset(null);setActiveRevision(null);setSolo(-1);setName(starter.name);notify(`${starter.name} loaded`);}
   useEffect(()=>setPinCursor(i=>Math.min(i,settings.rows*settings.columns-1)),[settings.rows,settings.columns]);
@@ -153,7 +161,7 @@ export default function App(){
   const visibleImages=filter==='selected'?selected:filter==='uploads'?uploads:filter==='new'?library.filter(i=>i.addedAt==='2026-10-26'):filter==='portraits'?library.filter(i=>i.category?.startsWith('portraits')):filter==='gesture'?library.filter(i=>i.category==='gesture'):filter==='architecture'?library.filter(i=>i.category?.includes('architecture')):filter==='landscape'?library.filter(i=>['colorful-landscape','ocean-aerial'].includes(i.category??'')):filter==='flowers'?library.filter(i=>i.category==='flowers-close-up'):filter==='abstract'?library.filter(i=>i.category==='abstract-texture'):allImages;
   const missing=settings.selectedIds.filter(id=>!allImages.some(i=>i.id===id));
   return <div className="app">
-    <header className="topbar"><a className="brand" href="/" aria-label="Print Shop home"><img className="brand-symbol" src="/brand-mark.svg" width="24" height="24" alt=""/>print shop</a><div className="top-actions"><button className="icon-button" aria-label="Studio guide" onClick={()=>setModal('help')}><CircleHelp size={17}/></button><button className="quiet-button" disabled={!ready} title="Randomize visual and motion parameters" onClick={()=>{setBeforeRegenerate(cloneSettings(settings));setSettings(regenerateSettings(settings,Math.floor(Math.random()*2147483648)));setSolo(-1);setPinning(false);}}><Shuffle size={14}/>Regenerate</button>{beforeRegenerate&&<button className="icon-button" aria-label="Undo regenerate" title="Undo regenerate" onClick={()=>{setSettings(beforeRegenerate);setBeforeRegenerate(null);setSolo(-1);setPinning(false);}}><RotateCcw size={15}/></button>}<button className="quiet-button" onClick={()=>{setName(currentPreset?.name??name);setModal('save');}}><Save size={15}/>Save preset</button><button className="primary-button" onClick={()=>setModal('export')}><ArrowDownToLine size={15}/>Export<ArrowUpRight size={14}/></button></div></header>
+    <header className="topbar"><a className="brand" href="/" aria-label="Print Shop home"><img className="brand-symbol" src="/brand-mark.svg" width="24" height="24" alt=""/>print shop</a><div className="top-actions"><button className="icon-button" aria-label="Studio guide" onClick={()=>setModal('help')}><CircleHelp size={17}/></button><button className="quiet-button" disabled={!ready} title="Randomize visual and motion parameters" onClick={()=>{immediatePreview.current=true;setBeforeRegenerate(cloneSettings(settings));setSettings(regenerateSettings(settings,Math.floor(Math.random()*2147483648)));setSolo(-1);setPinning(false);}}><Shuffle size={14}/>Regenerate</button>{beforeRegenerate&&<button className="icon-button" aria-label="Undo regenerate" title="Undo regenerate" onClick={()=>{immediatePreview.current=true;setSettings(beforeRegenerate);setBeforeRegenerate(null);setSolo(-1);setPinning(false);}}><RotateCcw size={15}/></button>}<button className="quiet-button" onClick={()=>{setName(currentPreset?.name??name);setModal('save');}}><Save size={15}/>Save preset</button><button className="primary-button" onClick={()=>setModal('export')}><ArrowDownToLine size={15}/>Export<ArrowUpRight size={14}/></button></div></header>
     <div className="workspace">
       <aside className="library-panel"><div className="panel-heading"><div><h2>Image library <span>{allImages.length.toString().padStart(2,'0')}</span></h2></div><button className="icon-button" aria-label="Upload images" onClick={()=>fileRef.current?.click()}><Plus size={19}/></button></div>
         <div className="library-tools"><Select label="Show images" value={filter} onChange={setFilter} options={[['all','All images'],['new','New images'],['portraits','Portraits'],['gesture','Hands & figures'],['architecture','Architecture'],['landscape','Landscapes'],['flowers','Flowers'],['abstract','Abstract'],['selected','Selected'],['uploads','Your uploads']]}/><div><button onClick={()=>set('selectedIds',visibleImages.map(i=>i.id))}>All</button><span>/</span><button onClick={()=>set('selectedIds',[])}>None</button></div></div>

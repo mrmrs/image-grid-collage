@@ -20,6 +20,12 @@ self.onmessage = async (event: MessageEvent) => {
       const prefix=paired?`collage-${output+1}/`:'';
       const plan=planGrid(tiles,s,output);
       const canvas=renderGrid(tiles,s,width,height,plan),ctx=canvas.getContext('2d')!;
+      // Ordinary photo previews can transfer the canvas directly; no CPU pixel round trip.
+      if(mode==='preview'&&!s.halftone){
+        bitmaps.push(canvas.transferToImageBitmap());
+        if(output===0&&id>=0)cells=describePlan(plan);
+        continue;
+      }
       const original=ctx.getImageData(0,0,width,height);
       const needsPlates=s.halftone||mode==='package';
       const plates=needsPlates?separate(original,s):[];

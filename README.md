@@ -62,6 +62,14 @@ Hosting shares the application and bundled image library. Uploaded images and pr
 - Scale cells uniformly, randomly, with coherent noise, or with a gradient. Add rotation, random rotation, and mirroring. Scale above 1 and rotation intentionally permit overlapping cells.
 - The **seed** controls all randomness. **Regenerate** randomizes visual and motion parameters across the composition, zoom, source positions, masks, color, and print screens. Paper color, print dimensions, DPI, and selected images stay fixed. Generated grids are square about 90% of the time, with square sizes starting at 2 × 2. The remainder splits between single-row/single-column strips (such as 1 × 12 or 12 × 1) and other rectangles. Manual row/column controls still allow any size from 1 to 80. Regenerate releases pins because the grid itself can change. **Undo regenerate** restores the previous settings; **New seed** in the sidebar varies only the current recipe. Rendering is deterministic for the same recipe and source images (minor rasterization differences between browsers are possible).
 
+## Preview performance
+
+Regenerate and Undo submit previews immediately; slider edits retain a short debounce. Only one still preview is submitted at a time, and newer edits replace queued requests. A completed obsolete preview is discarded. Motion and stills continue sharing the worker's decoded images. Unscreened previews transfer their canvas directly; screened previews reuse pixel scratch arrays and exact integer color lookup tables. Preview resolution, recipe randomization, export dimensions, and screen formulas are unchanged.
+
+`npm run test:regenerate` checks repeated clicks, the final recipe's exact pixels, and Undo. `npm run bench:regenerate` measures click-to-preview latency for 17 fixed seeds with two images and the full 37-image library, including photographic, contour, CMYK, spot, and curved-screen cases. It writes timings and image checksums to `/tmp/print-shop-regenerate-perf.json` (override with `PERF_OUTPUT`). Run benchmarks on an otherwise idle machine with the dev server on port 5173.
+
+In local headless Chrome on October 26, 2026, warm median click-to-preview times fell from **144 to 32 ms** with two images and **167 to 39 ms** with all 37 images. All 34 before/after output checksums matched. Eleven rapid clicks submitted two renders, with the final output matching every reference pixel. Timings depend on hardware and the recipe; these figures are local measurements, not latency guarantees.
+
 ## Image weave
 
 New sessions start with **Image weave**: two portraits interleaved into two complementary 12 × 12 checkerboards, shown side by side (stacked on mobile). Existing sessions are preserved; load **Presets → Image weave** to try the default.
