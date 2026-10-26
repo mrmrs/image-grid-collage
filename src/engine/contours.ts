@@ -35,7 +35,7 @@ export function analyzeContours(tiles:Tile[],s:Settings):ContourCandidate[]{
   }
   const size=20,across=32,atlas=new OffscreenCanvas(across*size,Math.ceil(candidates.length/across)*size),ctx=atlas.getContext('2d',{willReadFrequently:true})!;
   ctx.fillStyle=s.background;ctx.fillRect(0,0,atlas.width,atlas.height);
-  ctx.filter=`saturate(${s.saturation}) contrast(${s.contrast})`;
+  ctx.filter=s.saturation===1&&s.contrast===1?'none':`saturate(${s.saturation}) contrast(${s.contrast})`;
   candidates.forEach((t,i)=>{
     const x=i%across*size,y=Math.floor(i/across)*size;
     ctx.save();ctx.beginPath();ctx.rect(x,y,size,size);ctx.clip();ctx.translate(x+size/2,y+size/2);ctx.scale(size/aspect,size);
@@ -85,7 +85,7 @@ export function solveContours(candidates:ContourCandidate[],s:Settings):Tile[]{
 
 let cached:{key:string;images:ImageBitmap[];candidates:ContourCandidate[]}|undefined;
 export function contourPlan(tiles:Tile[],s:Settings){
-  const images=[...new Set(tiles.map(t=>t.image))],key=JSON.stringify([s.sourceColumns,s.sourceRows,s.width,s.height,s.margin,s.columns,s.rows,s.contourCrop,s.contourTurn,s.rotation,s.background,s.saturation,s.contrast,s.cellPins,s.multiscale&&s.multiscaleMode==='echo'?s.seed:null,s.echoLevels,s.echoZoom,s.multiscaleSource]);
+  const images=[...new Set(tiles.map(t=>t.image))],key=JSON.stringify([s.sourceColumns,s.sourceRows,s.width,s.height,s.margin,s.columns,s.rows,s.contourCrop,s.contourTurn,s.rotation,s.background,s.saturation,s.contrast,s.cellPins]);
   if(!cached||cached.key!==key||images.some((image,i)=>image!==cached!.images[i])||images.length!==cached.images.length)cached={key,images,candidates:analyzeContours(tiles,s)};
   return solveContours(cached.candidates,s);
 }

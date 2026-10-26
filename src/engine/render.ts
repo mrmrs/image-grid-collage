@@ -1,7 +1,7 @@
 import type { Settings, SourceImage, Ink, Mask, CellPin } from '../model';
 import { random, noise, clamp, rgb, cmyk, screenThreshold } from './math';
 import { contourPlan } from './contours';
-import { applyMultiscale } from './multiscale';
+import { zoomGrid,zoomTile } from './zoom';
 import { buildFlowField, flowDisplacement } from './flow';
 import { drawFragment } from './tile';
 import type { Tile } from './tile';
@@ -68,17 +68,13 @@ function maskPath(ctx: OffscreenCanvasRenderingContext2D, mask: Mask, w:number,h
 }
 export function planGrid(tiles:Tile[],s:Settings):Tile[]{
   if(!tiles.length)return [];
-  const far=tiles.find(t=>t.sourceId===s.multiscaleSource)??tiles[0];
-  const echo=s.multiscale&&s.multiscaleMode==='echo';
   let plan:Tile[];
-  if(echo){
-    plan=Array.from({length:s.rows*s.columns},(_,i)=>{
-      const level=Math.floor(random(s.seed,i,61)*s.echoLevels),zoom=s.echoZoom*2**level;
-      const sw=far.image.width/zoom,sh=far.image.height/zoom;
-      return {...far,tileIndex:i,sx:(far.image.width-sw)*random(s.seed,i,62),sy:(far.image.height-sh)*random(s.seed,i,63),sw,sh,turn:0};
-    });
+  if(s.multiscale&&s.multiscaleMode==='echo'){
+    const source=tiles.find(t=>t.sourceId===s.multiscaleSource)??tiles[0];
+    const whole={...source,sx:0,sy:0,sw:source.image.width,sh:source.image.height,turn:0};
+    plan=Array.from({length:s.rows*s.columns},()=>whole);
   }else plan=s.distribution==='contour'?contourPlan(tiles,s):Array.from({length:s.rows*s.columns},(_,i)=>chooseTile(tiles,s,Math.floor(i/s.columns),i%s.columns));
-  if(echo&&s.distribution==='contour')plan=contourPlan(plan,s);
+  if(s.multiscale){const magnifications=zoomGrid(s);plan=plan.map((tile,i)=>zoomTile(tile,magnifications[i],s));}
   for(const pin of s.cellPins){
     const source=tiles.find(t=>t.sourceId===pin.sourceId);
     if(source&&pin.cell<plan.length)plan[pin.cell]={...source,sx:pin.sx*source.image.width,sy:pin.sy*source.image.height,sw:pin.sw*source.image.width,sh:pin.sh*source.image.height,turn:pin.turn};
@@ -88,10 +84,10 @@ export function planGrid(tiles:Tile[],s:Settings):Tile[]{
 export function describePlan(plan:Tile[]):CellPin[]{return plan.map((t,cell)=>({cell,sourceId:t.sourceId??'',sx:t.sx/t.image.width,sy:t.sy/t.image.height,sw:t.sw/t.image.width,sh:t.sh/t.image.height,turn:t.turn??0}));}
 export function renderGrid(tiles: Tile[], s:Settings,width:number,height:number,plan=planGrid(tiles,s)) {
   const canvas=new OffscreenCanvas(width,height),ctx=canvas.getContext('2d',{willReadFrequently:true})!;
-  if(!s.multiscale){ctx.fillStyle=s.background;ctx.fillRect(0,0,width,height);}
+  ctx.fillStyle=s.background;ctx.fillRect(0,0,width,height);
   if(!tiles.length)return canvas;
   const margin=Math.min(width,height)*s.margin/100,cw=(width-margin*2)/s.columns,ch=(height-margin*2)/s.rows;
-  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.filter=`saturate(${s.saturation}) contrast(${s.contrast})`;
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.filter=s.saturation===1&&s.contrast===1?'none':`saturate(${s.saturation}) contrast(${s.contrast})`;
   for(let row=0;row<s.rows;row++)for(let col=0;col<s.columns;col++) {
     const i=row*s.columns+col,x=(col+.5)/s.columns,y=(row+.5)/s.rows,tile=plan[i];
     const factor=s.scaleMode==='random'?random(s.seed,i,2):s.scaleMode==='noise'?noise(x*s.noiseScale,y*s.noiseScale,s.seed+55):s.scaleMode==='gradient'?gradient(x,y,s.gradientAngle):1;
@@ -105,7 +101,6 @@ export function renderGrid(tiles: Tile[], s:Settings,width:number,height:number,
     // Cover the output cell without distorting the selected source slice.
     drawFragment(ctx,tile,w,h);ctx.restore();
   }
-  if(s.multiscale){const far=tiles.find(t=>t.sourceId===s.multiscaleSource)??tiles[0];applyMultiscale(canvas,far.image,s);}
   return canvas;
 }
 export interface Plate { ink: Ink; coverage: Uint8Array }

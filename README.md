@@ -19,7 +19,7 @@ npm test       # engine, screen coverage, recipe validation, independent TIFF de
 npm run preview
 ```
 
-`npm run test:browser` exercises the live UI, preset restoration, responsive layout, and downloads using installed Google Chrome. `npm run test:workflow` also checks every distribution and mask, uploads, backups, imports, custom inks, and full 3000 × 3000 TIFF/PSD decoding. Start the development server on port 5173 first. `npm run test:motion` checks autoplay, live edits, pause/stop opt-out, animation endpoints, caching, looping, controls, persistence, exports, and reduced motion in Chrome. `npm run test:visual` checks the new systems together, measures near/far image separation and resolution consistency, and verifies pins, presets, animation, mobile layout, and a combined 300 DPI print package. Test artifacts are saved under the system temporary directory.
+`npm run test:browser` exercises the live UI, preset restoration, responsive layout, and downloads using installed Google Chrome. `npm run test:workflow` also checks every distribution and mask, uploads, backups, imports, custom inks, and full 3000 × 3000 TIFF/PSD decoding. Start the development server on port 5173 first. `npm run test:motion` checks autoplay, live edits, pause/stop opt-out, animation endpoints, caching, looping, controls, persistence, exports, and reduced motion in Chrome. `npm run test:visual` checks the new systems together, verifies photographic crop accuracy, unchanged colors across all eleven zoom distributions, and resolution consistency, and verifies pins, presets, animation, mobile layout, and a combined 300 DPI print package. Test artifacts are saved under the system temporary directory.
 
 ## Hosting on Cloudflare
 
@@ -70,19 +70,23 @@ Choose **Compose → Distribution → Connected contours**, or load **Connected 
 
 Use **Pin fragments**, then click cells to lock/unlock their crops. Keyboard users can focus the grid, use arrow keys to choose a cell, and press Enter or Space. Pins constrain subsequent contour choices, survive regeneration and preset saves, and are also honored by other arrangements. Changing output grid dimensions releases pins. Pins referencing deselected images are inactive until those images are selected again.
 
-## One image at multiple scales
+## Cell zoom
 
-Load **Presets → Image within image** to start with a continuous 14 × 14 composition. In **Compose → Image at multiple scales**, choose a distance image from the selected sources. **Same image at multiple zoom levels** fills cells with deterministic crops at successive 2× magnifications of that image; **Selected image fragments** uses the normal grid arrangement, including connected contours. Both can be combined with masks and contour screening.
+Load **Spiral zoom**, **Modular zoom**, or **Zoom terraces** from Presets. In **Compose → Cell zoom**, choose a single image or apply magnifications to the selected fragments. This changes only the photographic crop: it adds no tone blending, contrast adjustment, or distant-image overlay. Masks and print screens can be combined with zoom independently.
 
-The renderer combines the distance image's broad structures with the grid's fine detail in linear-light RGB. This is baked into the exported pixels. **Distance image strength** sets how strongly the broad image replaces the grid's broad color structure; **Fine detail contrast** controls the retained close-up information. **Crossover scale** sets the spatial filter size as a percentage of the short canvas edge. **Distance image crop** adjusts the large image independently of the near crops. Keep gaps small and fine detail restrained for a clearer distant reading. The effect varies with the source's recognizability and contrast; there is no fixed physical viewing distance.
+Set **Zoom levels** (1–16), **Min zoom**, and **Max zoom** (1×–32×). 1× covers the cell; larger values crop closer. Levels are evenly spaced by ratio, so three levels between 1× and 4× are 1×, 2×, and 4×. One level uses Min zoom. **Crop focus** controls the shared focal point within each image or fragment.
 
-**Viewing distance** beneath the artwork shrinks the displayed composition from 100% to 20% without changing pixels, presets, or export dimensions. The image controls, crops, and pins are saved in preset versions and backups. If the chosen distance image is deselected, the first selected image is used until that source returns.
+Eleven distributions arrange these levels: spiral, tiled spirals, concentric rings, center outward, diagonal steps, row steps, column steps, alternating levels, repeating sequence, smooth noise, and random. Spirals offer turns and phase controls; tiled spirals repeat a shared module across the grid. Rings have repeat and phase controls. Reverse the zoom order to invert any pattern. The small zoom map shows placement, with lighter cells representing higher magnification.
+
+The seed shifts spiral/ring phase and changes noise/random patterns, including during motion. Ordered bands and alternating patterns retain their structure when regenerated. Image selection remains independent: **Selected fragments** uses the normal arrangement first, then applies the zoom field. Contour matches may be disrupted by the resulting crops. Pinned cells retain their exact crops and magnification.
+
+Zoom settings are saved in preset versions and backups. Older multi-scale recipes migrate their level count and magnification range where available; the previous frequency-blending effects are removed. If the chosen single image is deselected, the first selected image is used until that source returns.
 
 ## Presets and backups
 
 The working session autosaves to IndexedDB after a short debounce; wait for **Saved locally** before closing/reloading. Presets contain immutable revisions of all composition/print settings, source IDs, and seed. Restoring a version does not overwrite it; **Save version** appends a revision, and **Save as new preset** branches into a separate preset.
 
-Eight starting points are included, including Image within image, Connected landscapes, and Contour engraving. **Presets → Backup** exports the current settings, every preset/revision, and uploaded images to JSON. Import merges presets and uploads and loads the supplied working settings. The 25 bundled source images are referenced by stable IDs. Backups are portable between copies of this project. Browser storage is local to the origin and can be cleared by the browser, so keep JSON backups of work you want to retain.
+Ten starting points are included, including Spiral zoom, Modular zoom, Zoom terraces, Connected landscapes, and Contour engraving. **Presets → Backup** exports the current settings, every preset/revision, and uploaded images to JSON. Import merges presets and uploads and loads the supplied working settings. The 25 bundled source images are referenced by stable IDs. Backups are portable between copies of this project. Browser storage is local to the origin and can be cleared by the browser, so keep JSON backups of work you want to retain.
 
 ## Motion
 
@@ -140,9 +144,10 @@ The composite is an RGB proof, not a CMYK TIFF. There is no embedded ICC profile
 
 - `src/model.ts`: settings schema, bounds, defaults, and starter recipes.
 - `src/engine/contours.ts`: bounded contour analysis, neighbor matching, and pinned constraints.
-- `src/engine/multiscale.ts` and `analysis.ts`: resolution-independent analysis and linear-light frequency blending.
+- `src/engine/zoom.ts`: discrete spatial zoom fields and photographic crops.
+- `src/engine/analysis.ts`: resolution-independent image analysis for contour screens.
 - `src/engine/flow.ts`: continuous, image-driven screen displacement.
-- `src/components/VisualSystems.tsx`: controls for contour composition, multi-scale imagery, and contour screens.
+- `src/components/VisualSystems.tsx`: controls for contour composition, cell zoom, and contour screens.
 - `src/engine/math.ts`: seeded randomness, continuous noise, CMYK math, and area-normalized screen shapes.
 - `src/engine/render.ts`: source slicing, fragment selection, masks, composition, separation, and proof layers.
 - `src/engine/worker.ts`: shared preview/export pipeline, TIFF plates, layered PSD, ZIP packaging.
@@ -152,7 +157,7 @@ The composite is an RGB proof, not a CMYK TIFF. There is no embedded ICC profile
 - `src/motion/`: seeded choreography, cached-frame compositor, playback lifecycle, and React integration.
 - `src/components/MotionPanel.tsx`: pattern studies and embedded DialKit controls.
 
-To add a distribution, extend the schema and `chooseTile`, then add it to the Arrange by selector. To add a mask, extend `maskPath`. To add a halftone, extend `screenThreshold` and add an area-coverage test. Keep sampling decisions independent of output pixel size so exports match previews.
+To add a distribution, extend the schema and `chooseTile`, then add it to the Arrange by selector. To add a zoom distribution, extend `ZoomDistribution`, its validation enum, and `ZOOM_DISTRIBUTIONS` / `zoomLevelAt` in `zoom.ts`. To add a mask, extend `maskPath`. To add a halftone, extend `screenThreshold` and add an area-coverage test. Keep sampling decisions independent of output pixel size so exports match previews.
 
 Compose and Print use custom controls; Motion uses DialKit’s Slider, SelectControl, and Toggle. All controls write to the same serializable settings and immutable preset history. The render and animation engines are independent of React.
 

@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {DEFAULTS,cloneSettings,normalizeSettings} from '../src/model';
-import {blurField,sampleField,linearRGB,toSRGB} from '../src/engine/analysis';
+import {blurField,sampleField} from '../src/engine/analysis';
 import {edgeCost,solveContours} from '../src/engine/contours';
 import {planGrid,separate} from '../src/engine/render';
 import type {Tile} from '../src/engine/render';
@@ -13,13 +13,13 @@ describe('visual system recipes',()=>{
     expect(normalizeSettings(JSON.parse(JSON.stringify(recipe)))).toEqual(recipe);
     expect(()=>normalizeSettings({cellPins:[{...recipe.cellPins[0],sw:2}]})).toThrow();
     expect(()=>normalizeSettings({multiscaleSource:22})).toThrow();
-    expect(normalizeSettings({echoLevels:3.7})).toMatchObject({echoLevels:4});
+    expect(normalizeSettings({zoomLevels:3.7})).toMatchObject({zoomLevels:4});
   });
   it('creates reproducible crops of one image at distinct magnifications and honors pins',()=>{
     const tile={image:{width:1200,height:800},sourceId:'photo',sourceIndex:0,tileIndex:0,sx:0,sy:0,sw:1200,sh:800,color:[0,0,0]} as Tile;
-    const s={...DEFAULTS,sourceRows:1,sourceColumns:1,distribution:'random' as const,multiscale:true};
+    const s={...DEFAULTS,sourceRows:1,sourceColumns:1,distribution:'random' as const,multiscale:true,zoomLevels:3,zoomMin:1,zoomMax:4,zoomDistribution:'columns' as const};
     const plan=planGrid([tile],s);
-    expect(new Set(plan.map(t=>t.sw))).toEqual(new Set([1200,600,300]));
+    expect(new Set(plan.map(t=>t.sw))).toEqual(new Set([800,400,200]));
     expect(plan).toEqual(planGrid([tile],s));
     expect(plan.every(t=>t.sx>=0&&t.sx+t.sw<=1200&&t.sy>=0&&t.sy+t.sh<=800)).toBe(true);
     const pinned=planGrid([tile],{...s,seed:999,cellPins:[{cell:3,sourceId:'photo',sx:.2,sy:.1,sw:.4,sh:.5,turn:5}]});
@@ -41,14 +41,13 @@ describe('contour relationships',()=>{
     expect(plan).toEqual(solveContours(candidates,s));
   });
 });
-describe('multiscale filtering',()=>{
+describe('screen field filtering',()=>{
   it('preserves constant color, handles narrow images, and interpolates smoothly',()=>{
     for(const [w,h] of [[32,16],[1,32],[32,1]]){
       const field=blurField(new Float32Array(w*h*3).fill(.4),w,h,3,5);
       expect([...field].every(v=>Math.abs(v-.4)<.00001)).toBe(true);
     }
     expect(sampleField(new Float32Array([0,1]),2,1,.5,.5)).toBeCloseTo(.5);
-    for(let value=0;value<256;value++)expect(Math.abs(toSRGB(linearRGB[value])-value)).toBeLessThanOrEqual(1);
   });
 });
 describe('contour screening',()=>{

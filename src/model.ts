@@ -1,12 +1,13 @@
 export type Distribution = 'random' | 'gradient' | 'radial' | 'noise' | 'color' | 'luminance' | 'checkerboard' | 'stripes' | 'ordered' | 'contour';
+export type ZoomDistribution = 'spiral'|'tiled-spiral'|'rings'|'radial'|'diagonal'|'rows'|'columns'|'checkerboard'|'sequence'|'noise'|'random';
 export type MotionPattern = 'sweep' | 'ripple' | 'scatter' | 'flip' | 'slide';
 export type Mask = 'square' | 'circle' | 'diamond' | 'triangle' | 'hexagon' | 'arch' | 'mixed';
 export interface Ink { name: string; color: string; angle: number; density: number; enabled: boolean }
 export interface CellPin { cell:number; sourceId:string; sx:number; sy:number; sw:number; sh:number; turn:number }
 export interface Settings {
   contourContinuity:number; contourBreaks:number; contourDiversity:number; contourCrop:number; contourTurn:number; cellPins:CellPin[];
-  multiscale:boolean; multiscaleSource:string; multiscaleMode:'fragments'|'echo'; multiscaleStrength:number; multiscaleDetail:number;
-  multiscaleCrossover:number; multiscaleZoom:number; echoLevels:number; echoZoom:number;
+  multiscale:boolean; multiscaleSource:string; multiscaleMode:'fragments'|'echo';
+  zoomLevels:number;zoomMin:number;zoomMax:number;zoomDistribution:ZoomDistribution;zoomRepeats:number;zoomTurns:number;zoomPhase:number;zoomReverse:boolean;zoomFocusX:number;zoomFocusY:number;
   screenMode:'regular'|'contour'; flowStrength:number; flowSmoothing:number; flowLength:number; flowDivergence:number; flowAcrossCells:boolean;
   rows: number; columns: number; sourceRows: number; sourceColumns: number;
   gap: number; margin: number; background: string; distribution: Distribution;
@@ -26,7 +27,8 @@ export interface Revision { id: string; createdAt: string; settings: Settings; n
 export interface Preset { id: string; name: string; revisions: Revision[] }
 export const DEFAULTS: Settings = {
   contourContinuity:.85,contourBreaks:.08,contourDiversity:.35,contourCrop:.2,contourTurn:6,cellPins:[],
-  multiscale:false,multiscaleSource:'',multiscaleMode:'echo',multiscaleStrength:.9,multiscaleDetail:.8,multiscaleCrossover:2,multiscaleZoom:1,echoLevels:3,echoZoom:1,
+  multiscale:false,multiscaleSource:'',multiscaleMode:'echo',
+  zoomLevels:5,zoomMin:1,zoomMax:8,zoomDistribution:'spiral',zoomRepeats:3,zoomTurns:2,zoomPhase:0,zoomReverse:false,zoomFocusX:50,zoomFocusY:50,
   screenMode:'regular',flowStrength:.65,flowSmoothing:2,flowLength:3,flowDivergence:.7,flowAcrossCells:true,
   rows: 8, columns: 8, sourceRows: 4, sourceColumns: 4, gap: 5, margin: 6,
   background: '#f2efe7', distribution: 'noise', seed: 2408, gradientAngle: 45, noiseScale: 3, chaos: 0.15,
@@ -47,7 +49,9 @@ export const DEFAULTS: Settings = {
   motionGroupSize: 4, motionOverlap: .65, motionDirection: 'forward', motionLoop: true, motionSeedStep: 1,
 };
 export const STARTERS: { name: string; description: string; patch: Partial<Settings>; swatch: string }[] = [
-  { name: 'Image within image', description: 'One image, three magnifications', patch: {multiscale:true,multiscaleMode:'echo',rows:14,columns:14,gap:0,margin:4,multiscaleStrength:1,multiscaleDetail:.65,multiscaleCrossover:1.6}, swatch:'field' },
+  { name: 'Spiral zoom', description: 'One image · five magnifications', patch: {multiscale:true,rows:18,columns:18,gap:0,margin:4,zoomDistribution:'spiral'}, swatch:'field' },
+  { name: 'Modular zoom', description: 'Repeated spirals · six magnifications', patch: {multiscale:true,rows:24,columns:24,gap:2,margin:4,zoomDistribution:'tiled-spiral',zoomRepeats:3,zoomLevels:6,zoomMax:12}, swatch:'prisms' },
+  { name: 'Zoom terraces', description: 'Ordered bands of photographic scale', patch: {multiscale:true,rows:12,columns:12,gap:1,margin:4,zoomDistribution:'diagonal',zoomLevels:6,zoomMax:10}, swatch:'field' },
   { name: 'Connected landscapes', description: 'Fragments follow their neighbors', patch: {distribution:'contour',rows:9,columns:9,gap:0,contourBreaks:.03}, swatch:'prisms' },
   { name: 'Contour engraving', description: 'Curved screens follow light and shade', patch: {halftone:true,screenMode:'contour',pattern:'lines',separation:'spot',rows:5,columns:5,gap:0,lpi:16,flowStrength:.75}, swatch:'duo' },
   { name: 'Field notes', description: 'An unexpected landscape', patch: {}, swatch: 'field' },
@@ -58,6 +62,7 @@ export const STARTERS: { name: string; description: string; patch: Partial<Setti
 ];
 export const cloneSettings = (s: Settings): Settings => structuredClone(s);
 const enums: Record<string, string[]> = {
+  zoomDistribution:['spiral','tiled-spiral','rings','radial','diagonal','rows','columns','checkerboard','sequence','noise','random'],
   multiscaleMode:['fragments','echo'],screenMode:['regular','contour'],
   motionPattern: ['sweep','ripple','scatter','flip','slide'], motionGrouping: ['single','grouped','together'], motionDirection: ['forward','reverse'],
   distribution: ['random','gradient','radial','noise','color','luminance','checkerboard','stripes','ordered','contour'],
@@ -66,7 +71,7 @@ const enums: Record<string, string[]> = {
 };
 export const bounds: Record<string, [number, number]> = {
   contourContinuity:[0,1],contourBreaks:[0,1],contourDiversity:[0,1],contourCrop:[0,.5],contourTurn:[0,20],
-  multiscaleStrength:[0,1],multiscaleDetail:[0,2],multiscaleCrossover:[.3,8],multiscaleZoom:[1,4],echoLevels:[1,5],echoZoom:[1,8],
+  zoomLevels:[1,16],zoomMin:[1,32],zoomMax:[1,32],zoomRepeats:[1,8],zoomTurns:[.25,6],zoomPhase:[0,1],zoomFocusX:[0,100],zoomFocusY:[0,100],
   flowStrength:[0,1],flowSmoothing:[.3,8],flowLength:[1,8],flowDivergence:[0,1],
   motionDuration: [.15,3], motionIntensity: [0,1], motionHold: [0,8], motionGroupSize: [2,64], motionOverlap: [0,.9], motionSeedStep: [1,10000],
   rows: [1,80], columns: [1,80], sourceRows: [1,24], sourceColumns: [1,24], gap: [0,50], margin: [0,30],
@@ -76,20 +81,24 @@ export const bounds: Record<string, [number, number]> = {
 };
 export function normalizeSettings(input: unknown): Settings {
   if (!input || typeof input !== 'object') throw new Error('This file does not contain valid settings.');
-  const result = cloneSettings(DEFAULTS), value = input as Record<string, unknown>;
+  const result = cloneSettings(DEFAULTS), value = {...input} as Record<string, unknown>;
+  // Older zoom recipes retain their magnification range; frequency/contrast effects are retired.
+  if(value.zoomLevels===undefined&&value.echoLevels!==undefined)value.zoomLevels=value.echoLevels;
+  if(value.zoomMin===undefined&&value.echoZoom!==undefined)value.zoomMin=value.echoZoom;
+  if(value.zoomMax===undefined&&typeof value.echoZoom==='number'&&typeof value.echoLevels==='number')value.zoomMax=value.echoZoom*2**Math.max(0,value.echoLevels-1);
   for (const key of Object.keys(DEFAULTS) as (keyof Settings)[]) {
     const v = value[key];
     if (v === undefined) continue;
     if (bounds[key]) {
       if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(`Invalid ${key}.`);
       let n = Math.min(bounds[key][1], Math.max(bounds[key][0], v));
-      if (['rows','columns','sourceRows','sourceColumns','seed','dpi','motionGroupSize','motionSeedStep','echoLevels'].includes(key)) n = Math.round(n);
+      if (['rows','columns','sourceRows','sourceColumns','seed','dpi','motionGroupSize','motionSeedStep','zoomLevels','zoomRepeats'].includes(key)) n = Math.round(n);
       (result as unknown as Record<string,unknown>)[key] = n;
     } else if (enums[key]) {
       if (!enums[key].includes(String(v))) throw new Error(`Unknown ${key}.`);
       (result as unknown as Record<string,unknown>)[key] = v;
     } else if (key === 'multiscaleSource') {
-      if(typeof v!=='string'||v.length>200)throw new Error('Invalid distance image.');
+      if(typeof v!=='string'||v.length>200)throw new Error('Invalid zoom image.');
       result.multiscaleSource=v;
     } else if (key === 'cellPins') {
       if(!Array.isArray(v)||v.length>6400)throw new Error('Invalid pinned cells.');
@@ -114,6 +123,7 @@ export function normalizeSettings(input: unknown): Settings {
       (result as unknown as Record<string,unknown>)[key] = v;
     } else throw new Error(`Invalid ${key}.`);
   }
+  if(result.zoomMax<result.zoomMin)[result.zoomMin,result.zoomMax]=[result.zoomMax,result.zoomMin];
   return result;
 }
 export function exportDimensions(s: Settings) {

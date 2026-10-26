@@ -1,22 +1,29 @@
 import type {Settings,SourceImage} from '../model';
-import {Section,Slider,Select,Toggle} from './Controls';
+import {Section,Slider,Select,Toggle,NumberField} from './Controls';
+import {ZOOM_DISTRIBUTIONS,zoomLevelAt,zoomLevels} from '../engine/zoom';
 
 type ControlsProps={settings:Settings;patch:(p:Partial<Settings>)=>void};
 export function MultiscaleControls({settings:s,patch,images}:{images:SourceImage[]}&ControlsProps){
   const image=images.find(i=>i.id===s.multiscaleSource)??images[0];
-  return <Section title="Image at multiple scales" defaultOpen={s.multiscale}>
-    <Toggle label="Enable multiple scales" value={s.multiscale} onChange={multiscale=>patch({multiscale})}/>
+  const levels=zoomLevels(s),paths=levels.map(()=> '');
+  if(s.multiscale)for(let row=0;row<s.rows;row++)for(let col=0;col<s.columns;col++)paths[zoomLevelAt(s,row,col)]+= `M${col} ${row}h1v1h-1z`;
+  const periodic=['spiral','tiled-spiral','rings'].includes(s.zoomDistribution);
+  return <Section title="Cell zoom" defaultOpen={s.multiscale}>
+    <Toggle label="Enable cell zoom" value={s.multiscale} onChange={multiscale=>patch({multiscale})}/>
     {s.multiscale&&<>
-      <Select label="Distance image" value={images.some(i=>i.id===s.multiscaleSource)?s.multiscaleSource:''} options={[["","First selected image"],...images.map(i=>[i.id,i.title] as const)]} onChange={multiscaleSource=>patch({multiscaleSource})}/>
-      {image&&<div className="distance-source"><img src={image.src} alt="Image seen from a distance"/><span>{image.title}</span></div>}
-      <Select label="Close-up content" value={s.multiscaleMode} options={[["echo","Same image at multiple zoom levels"],["fragments","Selected image fragments"]]} onChange={multiscaleMode=>patch({multiscaleMode:multiscaleMode as Settings['multiscaleMode']})}/>
-      {s.multiscaleMode==='echo'&&<><Slider label="Zoom levels" value={s.echoLevels} onChange={echoLevels=>patch({echoLevels})} min={1} max={5}/><Slider label="Close-up magnification" value={s.echoZoom} onChange={echoZoom=>patch({echoZoom})} min={1} max={8} step={.1} suffix="×"/></>}
-      <Slider label="Distance image strength" value={s.multiscaleStrength} onChange={multiscaleStrength=>patch({multiscaleStrength})} min={0} max={1} step={.01}/>
-      <Slider label="Fine detail contrast" value={s.multiscaleDetail} onChange={multiscaleDetail=>patch({multiscaleDetail})} min={0} max={2} step={.01}/>
-      <Slider label="Crossover scale" value={s.multiscaleCrossover} onChange={multiscaleCrossover=>patch({multiscaleCrossover})} min={.3} max={8} step={.1} suffix="%"/>
-      <Slider label="Distance image crop" value={s.multiscaleZoom} onChange={multiscaleZoom=>patch({multiscaleZoom})} min={1} max={4} step={.05} suffix="×"/>
-      <button className="wide-button" onClick={()=>patch({rows:14,columns:14,gap:0,margin:4,mask:'square',scale:1,scaleMode:'uniform',rotation:0,rotationJitter:0,flip:false,multiscaleStrength:1,multiscaleDetail:.65,multiscaleCrossover:1.6,cellPins:[]})}>Use a continuous 14 × 14 grid</button>
-      <p className="control-hint">Near: photographic detail. Far: the whole image. Use the distance preview below the artwork. Smaller gaps and restrained detail make the distant image clearer.</p>
+      <Select label="Zoom content" value={s.multiscaleMode} options={[["echo","Single image"],["fragments","Selected fragments"]]} onChange={multiscaleMode=>patch({multiscaleMode:multiscaleMode as Settings['multiscaleMode']})}/>
+      {s.multiscaleMode==='echo'&&<><Select label="Zoom image" value={images.some(i=>i.id===s.multiscaleSource)?s.multiscaleSource:''} options={[["","First selected image"],...images.map(i=>[i.id,i.title] as const)]} onChange={multiscaleSource=>patch({multiscaleSource})}/>
+      {image&&<div className="zoom-source"><img src={image.src} alt="Zoom source"/><span>{image.title}</span></div>}</>}
+      <Slider label="Zoom levels" value={s.zoomLevels} onChange={zoomLevels=>patch({zoomLevels})} min={1} max={16}/>
+      <div className="two-columns"><NumberField label="Min zoom" value={s.zoomMin} min={1} max={32} step={.25} suffix="×" onChange={zoomMin=>patch({zoomMin,zoomMax:Math.max(zoomMin,s.zoomMax)})}/><NumberField label="Max zoom" value={s.zoomMax} min={1} max={32} step={.25} suffix="×" onChange={zoomMax=>patch({zoomMax,zoomMin:Math.min(zoomMax,s.zoomMin)})}/></div>
+      <Select label="Zoom distribution" value={s.zoomDistribution} options={ZOOM_DISTRIBUTIONS.map(d=>[d.id,d.label] as const)} onChange={zoomDistribution=>patch({zoomDistribution:zoomDistribution as Settings['zoomDistribution']})}/>
+      {['spiral','tiled-spiral'].includes(s.zoomDistribution)&&<Slider label="Spiral turns" value={s.zoomTurns} onChange={zoomTurns=>patch({zoomTurns})} min={.25} max={6} step={.25}/>}
+      {['tiled-spiral','rings','noise'].includes(s.zoomDistribution)&&<Slider label={s.zoomDistribution==='tiled-spiral'?'Modules per side':s.zoomDistribution==='rings'?'Ring repeats':'Zoom noise frequency'} value={s.zoomRepeats} onChange={zoomRepeats=>patch({zoomRepeats})} min={1} max={8}/>}
+      {periodic&&<Slider label="Pattern phase" value={s.zoomPhase} onChange={zoomPhase=>patch({zoomPhase})} min={0} max={1} step={.01}/>}
+      <Toggle label="Reverse zoom order" value={s.zoomReverse} onChange={zoomReverse=>patch({zoomReverse})}/>
+      <figure className="zoom-map"><svg viewBox={`0 0 ${s.columns} ${s.rows}`} role="img" aria-label="Zoom placement map: lighter cells have more magnification" preserveAspectRatio="xMidYMid meet">{paths.map((d,i)=><path key={i} d={d} fill={`hsl(80 9% ${23+65*i/Math.max(1,levels.length-1)}%)`}/>)}</svg><figcaption>{levels.map((z,i)=><span key={i}>{Number(z.toFixed(2))}×</span>)}</figcaption></figure>
+      <details className="zoom-focus"><summary>Crop focus</summary><Slider label="Focus X" value={s.zoomFocusX} onChange={zoomFocusX=>patch({zoomFocusX})} min={0} max={100} suffix="%"/><Slider label="Focus Y" value={s.zoomFocusY} onChange={zoomFocusY=>patch({zoomFocusY})} min={0} max={100} suffix="%"/></details>
+      <p className="control-hint">1× fills the cell; higher levels crop closer. Levels are evenly spaced by ratio.{s.zoomLevels===1?' One level uses Min zoom.':''}{s.cellPins.length?' Pinned crops retain their zoom.':''}</p>
     </>}
   </Section>;
 }
