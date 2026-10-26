@@ -31,11 +31,11 @@ try{
   }return fresh.length;
  },fresh);assert.equal(decoded,12);
  const html=await(await page.request.get(base)).text();assert.ok(html.includes('property="og:image"'));assert.ok(html.includes('name="twitter:card" content="summary_large_image"'));
- for(const [file,w,h] of [['og-image.png',1200,630],['favicon-32.png',32,32],['apple-touch-icon.png',180,180]]){
+ for(const [file,w,h] of [['og-print-shop.png',1200,630],['favicon-32.png',32,32],['apple-touch-icon.png',180,180]]){
   const response=await page.request.get(base+'/'+file);assert.equal(response.status(),200);assert.ok(response.headers()['content-type'].includes('image/png'));
   const bytes=await response.body();assert.equal(bytes.readUInt32BE(16),w);assert.equal(bytes.readUInt32BE(20),h);
  }
- await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content','https://image-grid-collage.adam-f8f.workers.dev/og-image.png');
+ await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content','https://image-grid-collage.adam-f8f.workers.dev/og-print-shop.png');
  await expect(page.locator('.brand-symbol')).toHaveAttribute('src','/brand-mark.svg');
  for(const file of ['brand-mark.svg','favicon.svg']){const response=await page.request.get(base+'/'+file);assert.equal(response.status(),200);assert.ok((await response.text()).includes('rotate(-7 32 32)'));}
  await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);

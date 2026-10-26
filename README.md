@@ -1,4 +1,4 @@
-# Fieldwork
+# Print Shop
 
 A local generative image and print studio. React + TypeScript + Vite, with Canvas rendering in web workers. Images, fonts, and application code are local; no accounts or API keys are needed.
 
@@ -166,7 +166,7 @@ Compose and Print use custom controls; Motion uses DialKit’s Slider, SelectCon
 
 ## Brand assets
 
-The header and favicon share the four-cell Fieldwork mark in `public/brand-mark.svg`. `public/favicon.svg`, a 32 px PNG favicon, and a 180 px Apple touch icon use the same geometry and palette. The 1200 × 630 OG card uses the live rendering engine, bundled fonts, and a credited portrait. Static Open Graph and Twitter tags in `index.html` point to the published image with dimensions and alt text, so crawlers do not need JavaScript.
+The header and favicon share the four-cell Print Shop mark in `public/brand-mark.svg`. `public/favicon.svg`, a 32 px PNG favicon, and a 180 px Apple touch icon use the same geometry and palette. The 1200 × 630 OG card uses the live rendering engine, bundled fonts, and a credited portrait. Static Open Graph and Twitter tags in `index.html` point to the published image with dimensions and alt text, so crawlers do not need JavaScript.
 
 With Vite running locally, `npm run assets:brand` regenerates the PNG assets. If the public hostname changes, update the canonical, OG URL, and absolute image URLs in `index.html`.
 
