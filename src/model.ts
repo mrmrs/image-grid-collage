@@ -14,7 +14,7 @@ export interface Settings {
   rows: number; columns: number; sourceRows: number; sourceColumns: number;
   gap: number; margin: number; background: string; distribution: Distribution;
   seed: number; gradientAngle: number; noiseScale: number; chaos: number;
-  colorStart: string; colorEnd: string; crop: 'random' | 'corresponding' | 'ordered';
+  colorStart: string; colorEnd: string; crop: 'random' | 'corresponding' | 'ordered' | 'reconstruct';
   mask: Mask; scale: number; variation: number; scaleMode: 'uniform' | 'random' | 'noise' | 'gradient';
   rotation: number; rotationJitter: number; flip: boolean; saturation: number; contrast: number;
   halftone: boolean; pattern: 'dots' | 'lines' | 'diamonds' | 'squares'; lpi: number;
@@ -33,9 +33,9 @@ export const DEFAULTS: Settings = {
   zoomLevels:5,zoomMin:1,zoomMax:32,zoomDistribution:'spiral',zoomRepeats:3,zoomTurns:2,zoomPhase:0,zoomReverse:false,zoomContrast:0,
   sourceXDistribution:'columns',sourceYDistribution:'rows',sourceXMin:0,sourceXMax:100,sourceYMin:0,sourceYMax:100,sourcePositionRepeats:3,sourcePositionPhase:0,sourceSnap:true,
   screenMode:'regular',flowStrength:.65,flowSmoothing:2,flowLength:3,flowDivergence:.7,flowAcrossCells:true,
-  rows: 8, columns: 8, sourceRows: 4, sourceColumns: 4, gap: 5, margin: 6,
-  background: '#f2efe7', distribution: 'noise', seed: 2408, gradientAngle: 45, noiseScale: 3, chaos: 0.15,
-  colorStart: '#214c5d', colorEnd: '#e9a16b', crop: 'random', mask: 'square', scale: 1,
+  rows: 12, columns: 12, sourceRows: 4, sourceColumns: 4, gap: 0, margin: 4,
+  background: '#f2efe7', distribution: 'checkerboard', seed: 2408, gradientAngle: 45, noiseScale: 3, chaos: 0,
+  colorStart: '#214c5d', colorEnd: '#e9a16b', crop: 'reconstruct', mask: 'square', scale: 1,
   variation: 0.24, scaleMode: 'uniform', rotation: 0, rotationJitter: 0, flip: false, saturation: 1, contrast: 1,
   halftone: false, pattern: 'dots', lpi: 18, separation: 'cmyk', blackGeneration: 1, gain: 0,
   inks: [
@@ -47,11 +47,11 @@ export const DEFAULTS: Settings = {
   spotInks: [
     { name: 'Ocean', color: '#16646b', angle: 15, density: 1, enabled: true },
     { name: 'Vermilion', color: '#ec593c', angle: 75, density: 1, enabled: true },
-  ], width: 10, height: 10, dpi: 300, selectedIds: [],
+  ], width: 10, height: 10, dpi: 300, selectedIds: ['h1zwnZNp1fI','xmSWVeGEnJw'],
   motionPattern: 'sweep', motionGrouping: 'grouped', motionDuration: .65, motionIntensity: .65, motionHold: 1.2,
   motionGroupSize: 4, motionOverlap: .65, motionDirection: 'forward', motionLoop: true, motionSeedStep: 1,
 };
-export const STARTERS: { name: string; description: string; patch: Partial<Settings>; swatch: string }[] = [
+const classicStarters: { name: string; description: string; patch: Partial<Settings>; swatch: string }[] = [
   { name: 'Portrait / detail', description: 'Faces, eyes & abstract fragments', patch: {selectedIds:['h1zwnZNp1fI'],multiscale:true,rows:12,columns:12,gap:1,margin:4,zoomLevels:4,zoomMin:1,zoomMax:24,zoomContrast:.85,zoomDistribution:'checkerboard',sourceSnap:false,sourceXMin:22,sourceXMax:78,sourceYMin:15,sourceYMax:65}, swatch:'portrait' },
   { name: 'Spiral zoom', description: 'Wide views · close details', patch: {multiscale:true,rows:18,columns:18,gap:0,margin:4,zoomDistribution:'spiral',zoomContrast:.8,zoomLevels:4,zoomMax:64}, swatch:'field' },
   { name: 'Modular zoom', description: 'Repeated spirals · six magnifications', patch: {multiscale:true,rows:24,columns:24,gap:2,margin:4,zoomDistribution:'tiled-spiral',zoomRepeats:3,zoomLevels:6,zoomMax:128,zoomContrast:.75,sourceXDistribution:'tiled',sourceYDistribution:'tiled'}, swatch:'prisms' },
@@ -64,6 +64,10 @@ export const STARTERS: { name: string; description: string; patch: Partial<Setti
   { name: 'Prismatic', description: 'Diamonds in a color field', patch: { mask: 'diamond', rows: 10, columns: 10, gap: 0, distribution: 'color', scaleMode: 'gradient', variation: 0.45 }, swatch: 'diamonds' },
   { name: 'Press proof', description: 'Four-color dot screen', patch: { halftone: true, separation: 'cmyk', lpi: 22, rows: 5, columns: 5, gap: 3, distribution: 'ordered' }, swatch: 'press' },
 ];
+export const STARTERS = [
+  {name:'Image weave',description:'Two images · matching fragments · 12 × 12',patch:{...DEFAULTS},swatch:'field'},
+  ...classicStarters.map(starter=>({...starter,patch:{rows:8,columns:8,gap:5,margin:6,distribution:'noise' as const,chaos:.15,crop:'random' as const,...starter.patch}})),
+];
 export const cloneSettings = (s: Settings): Settings => structuredClone(s);
 export const settingEnums: Record<string, string[]> = {
   sourceXDistribution:['columns','rows','sequence','random','noise','spiral','tiled','fixed'],
@@ -72,7 +76,7 @@ export const settingEnums: Record<string, string[]> = {
   multiscaleMode:['fragments','echo'],screenMode:['regular','contour'],
   motionPattern: ['sweep','ripple','scatter','flip','slide'], motionGrouping: ['single','grouped','together'], motionDirection: ['forward','reverse'],
   distribution: ['random','gradient','radial','noise','color','luminance','checkerboard','stripes','ordered','contour'],
-  crop: ['random','corresponding','ordered'], mask: ['square','circle','diamond','triangle','hexagon','arch','mixed'],
+  crop: ['random','corresponding','ordered','reconstruct'], mask: ['square','circle','diamond','triangle','hexagon','arch','mixed'],
   scaleMode: ['uniform','random','noise','gradient'], pattern: ['dots','lines','diamonds','squares'], separation: ['cmyk','spot'],
 };
 export const bounds: Record<string, [number, number]> = {

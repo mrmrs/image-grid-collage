@@ -4,7 +4,7 @@ import {artworkKey,cellProgress,cellSchedule,ease,motionTiming,MOTION_PATTERNS,v
 
 describe('motion choreography',()=>{
   it('one-at-a-time has no overlapping cells',()=>{
-    const s={...cloneSettings(DEFAULTS),motionGrouping:'single' as const,motionDuration:.5};
+    const s={...cloneSettings(DEFAULTS),rows:8,columns:8,motionGrouping:'single' as const,motionDuration:.5};
     const starts=[...cellSchedule(s,s.seed)].sort((a,b)=>a-b);
     expect(starts).toEqual(Array.from({length:64},(_,i)=>i*.5));expect(motionTiming(s).duration).toBe(32);
     for(let t=.1;t<32;t+=.25)expect(starts.filter(start=>cellProgress(t,start,.5)>0&&cellProgress(t,start,.5)<1)).toHaveLength(1);
@@ -21,7 +21,7 @@ describe('motion choreography',()=>{
     expect(motionTiming({...DEFAULTS,rows:1,columns:1}).duration).toBe(DEFAULTS.motionDuration);
   });
   it.each(MOTION_PATTERNS.map(p=>p.id))('%s ordering is deterministic, reversible and covers the grid',motionPattern=>{
-    const s={...DEFAULTS,motionPattern,motionGrouping:'single' as const};
+    const s={...DEFAULTS,rows:8,columns:8,motionPattern,motionGrouping:'single' as const};
     const starts=cellSchedule(s,42),reverse=cellSchedule({...s,motionDirection:'reverse'},42);
     expect(starts).toEqual(cellSchedule(s,42));expect(new Set(starts).size).toBe(64);
     starts.forEach((v,i)=>expect(v+reverse[i]).toBeCloseTo(63*s.motionDuration));

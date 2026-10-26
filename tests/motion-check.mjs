@@ -14,6 +14,7 @@ const hash=locator=>locator.evaluate(c=>{const data=c.getContext('2d').getImageD
 const scrub=async value=>{await page.getByRole('slider',{name:'Animation progress',exact:true}).fill(String(value));await expect(page.locator('.motion-progress-value')).toHaveText(`${value}%`);};
 try{
  await page.goto('http://127.0.0.1:5173');await settle();
+ await page.getByLabel('Arrange by',{exact:true}).selectOption('random');await settle();
  await page.getByRole('button',{name:'motion',exact:true}).click();await page.getByRole('slider',{name:'Cells per group',exact:true}).waitFor();
  await page.getByRole('button',{name:'Pause grid animation',exact:true}).click();
  const baseJobs=await page.evaluate(()=>window.motionJobs.length);

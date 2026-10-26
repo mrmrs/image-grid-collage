@@ -13,7 +13,7 @@ const tab=async name=>page.getByRole('button',{name,exact:true}).click();
 const hash=()=>canvas.evaluate(c=>{let h=0;const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;for(let i=0;i<d.length;i+=37)h=Math.imul(h,31)+d[i]|0;return h;});
 const saveArt=async name=>fs.writeFile(`/tmp/fieldwork-${name}.png`,Buffer.from((await canvas.evaluate(c=>c.toDataURL())).split(',')[1],'base64'));
 try{
- await page.goto(process.env.APP_URL||'http://127.0.0.1:5173');await expect(page.getByText('8 images in the mix')).toBeVisible({timeout:20000});await settle();
+ await page.goto(process.env.APP_URL||'http://127.0.0.1:5173');await expect(page.getByText('2 images in the mix')).toBeVisible({timeout:20000});await settle();
  await tab('presets');await page.getByRole('button',{name:/Spiral zoom/}).click();await settle();await tab('compose');
  await expect(page.getByRole('switch',{name:'Enable cell zoom'})).toBeChecked();
  await saveArt('zoom-spiral');const initial=await hash();
@@ -55,7 +55,7 @@ try{
  const flowing=await hash();await page.getByLabel('Screen structure',{exact:true}).selectOption('regular');await settle();assert.notEqual(await hash(),flowing);
  await page.getByLabel('Screen structure',{exact:true}).selectOption('contour');await settle();assert.equal(await hash(),flowing);
  await tab('Save preset');await page.getByLabel('Preset name',{exact:true}).fill('Contour zoom study');await page.getByRole('dialog').getByRole('button',{name:'Save preset',exact:true}).click();await expect(page.getByText('Saved locally',{exact:true})).toBeVisible();
- await page.reload();await expect(page.getByText('8 images in the mix')).toBeVisible();await settle();assert.equal(await hash(),flowing,'Saved settings reproduce the exact composite');
+ await page.reload();await expect(page.getByText('2 images in the mix')).toBeVisible();await settle();assert.equal(await hash(),flowing,'Saved settings reproduce the exact composite');
  await tab('motion');await expect(page.getByLabel('Animated composition preview',{exact:true})).toBeVisible({timeout:30000});await tab('Regenerate');await expect(page.getByLabel('Animated composition preview',{exact:true})).toBeVisible({timeout:30000});
  await expect(page.getByRole('button',{name:'Pause grid animation',exact:true})).toBeEnabled({timeout:30000});
  await tab('Undo regenerate');await expect(page.getByRole('button',{name:'Pause grid animation',exact:true})).toBeEnabled({timeout:30000});await tab('Stop animation and return to still');

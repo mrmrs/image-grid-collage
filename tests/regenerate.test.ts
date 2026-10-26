@@ -26,6 +26,6 @@ describe('full recipe regeneration',()=>{
   expect(grids.every(s=>s.rows*s.columns>=2)).toBe(true);
  });
  it('handles an empty source library',()=>{
-  expect(regenerateSettings(DEFAULTS,5)).toMatchObject({selectedIds:[],multiscaleSource:''});
+  expect(regenerateSettings({...DEFAULTS,selectedIds:[]},5)).toMatchObject({selectedIds:[],multiscaleSource:''});
  });
 });

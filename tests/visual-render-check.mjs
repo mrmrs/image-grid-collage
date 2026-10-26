@@ -22,6 +22,19 @@ try{
    const size=Math.min(image.width,image.height)/zoom;ctx.imageSmoothingQuality='high';ctx.drawImage(image,(image.width-size)/2,(image.height-size)/2,size,size,0,0,300,300);
    directErrors.push(rmse(sample(output,300),sample(reference,300)));
   }
+  // Independent reference: cover each photograph once and reveal alternating rectangles.
+  const weaveErrors=[];
+  for(const [rows,columns,width,height] of [[12,12,600,600],[3,5,900,600],[1,12,600,600],[12,1,600,600]]){
+   const s={...DEFAULTS,rows,columns,width:width/100,height:height/100,margin:0};
+   const output=renderGrid(tiles,s,width,height),reference=new OffscreenCanvas(width,height),ctx=reference.getContext('2d');
+   ctx.imageSmoothingQuality='high';
+   for(let row=0;row<rows;row++)for(let col=0;col<columns;col++){
+    const image=images[(row+col)%2].image,scale=Math.max(width/image.width,height/image.height);
+    ctx.save();ctx.beginPath();ctx.rect(col*width/columns,row*height/rows,width/columns,height/rows);ctx.clip();
+    ctx.drawImage(image,(width-image.width*scale)/2,(height-image.height*scale)/2,image.width*scale,image.height*scale);ctx.restore();
+   }
+   weaveErrors.push(rmse(sample(output,300),sample(reference,300)));
+  }
   const flat=new OffscreenCanvas(64,64),fc=flat.getContext('2d');fc.fillStyle='rgb(100,140,180)';fc.fillRect(0,0,64,64);
   const flatTiles=makeTiles([{source:{id:'flat'},image:await createImageBitmap(flat)}],settings);
   let colorsPreserved=true;
@@ -46,9 +59,11 @@ try{
   const pin={cell:22,sourceId:pinned.sourceId,sx:pinned.sx/pinned.image.width,sy:pinned.sy/pinned.image.height,sw:pinned.sw/pinned.image.width,sh:pinned.sh/pinned.image.height,turn:pinned.turn??0};
   const next=planGrid(tiles,{...contour,multiscale:true,multiscaleMode:'fragments',seed:9898,cellPins:[pin]})[22];
   const rectangular=renderGrid(tiles,{...settings,width:12,height:4,mask:'circle',gap:8},1200,400);
-  return {scaleError,directErrors,colorsPreserved,coordinatesMatch,pinMatches:next.sx===pinned.sx&&next.sy===pinned.sy&&next.sw===pinned.sw,corner:[...rectangular.getContext('2d').getImageData(0,0,1,1).data]};
+  return {scaleError,directErrors,weaveErrors,colorsPreserved,coordinatesMatch,pinMatches:next.sx===pinned.sx&&next.sy===pinned.sy&&next.sw===pinned.sw,corner:[...rectangular.getContext('2d').getImageData(0,0,1,1).data]};
  });
  console.log('Render metrics:',result);
+ // Chrome filters separately sampled crops differently from one full-image draw (especially downscaling).
+ assert.ok(result.weaveErrors.every(error=>error<.02),'Weave must match two whole photographs revealed through alternating cells');
  assert.ok(result.scaleError<.065,'Preview and print should agree after downsampling');
  assert.ok(result.directErrors.every(error=>error<.001),'Zoom output must match direct photographic crops');
  assert.equal(result.colorsPreserved,true,'Zoom must not introduce contrast or color effects');

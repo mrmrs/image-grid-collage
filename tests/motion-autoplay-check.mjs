@@ -27,7 +27,7 @@ const visibility=async hidden=>page.evaluate(value=>{
 },hidden);
 try{
  await page.goto(process.env.APP_URL||'http://127.0.0.1:5173');
- await expect(page.getByText('8 images in the mix')).toBeVisible();
+ await expect(page.getByText('2 images in the mix')).toBeVisible();
  await expect(animated).toBeHidden();
  await tab('motion');await playing();
  // Both cached edits and edits that invalidate rendered frames keep animating.
@@ -39,7 +39,7 @@ try{
  await expect(page.locator('.motion-seeds')).toContainText('3302');await playing();
  const source=page.locator('.image-select[aria-pressed="true"]').first();
  const title=(await source.getAttribute('aria-label')).replace('Deselect ','');
- await source.click();await expect(page.getByText('7 images in the mix')).toBeVisible();await playing();
+ await source.click();await expect(page.getByText('1 image in the mix')).toBeVisible();await playing();
  await tab(`Select ${title}`);await playing();
  // Leaving the inspector tab and dialogs temporarily interrupt playback, not intent.
  await tab('compose');await expect(animated).toBeHidden();

@@ -53,6 +53,16 @@ export function chooseTile(tiles: Tile[], s: Settings, row: number, col: number)
   }
   if(s.distribution!=='random')t=clamp(t+(random(s.seed,index,6)-.5)*s.chaos);
   sourceIndex=Math.min(count-1,Math.floor(t*count));
+  if(s.crop==='reconstruct') {
+    const tile=tiles[sourceIndex*n],image=tile.image;
+    // Cover the entire composition once, then slice that crop into matching cells.
+    // Use physical proportions so preview and print resolve the same source pixels.
+    const margin=Math.min(s.width,s.height)*s.margin/100;
+    const aspect=(s.width-2*margin)/(s.height-2*margin);
+    const sw=Math.min(image.width,image.height*aspect),sh=sw/aspect;
+    return {...tile,sx:(image.width-sw)/2+col*sw/s.columns,sy:(image.height-sh)/2+row*sh/s.rows,
+      sw:sw/s.columns,sh:sh/s.rows};
+  }
   const cropIndex=s.crop==='corresponding'?Math.min(s.sourceRows-1,Math.floor(y*s.sourceRows))*s.sourceColumns+Math.min(s.sourceColumns-1,Math.floor(x*s.sourceColumns)):s.crop==='ordered'?index%n:Math.floor(random(s.seed,index,1)*n);
   return tiles[sourceIndex*n+cropIndex];
 }

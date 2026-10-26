@@ -57,7 +57,7 @@ describe('independent source coordinates',()=>{
   }
  });
  it('decouples coordinate layout from zoom and each axis from the other',()=>{
-  const s={...DEFAULTS,sourceXDistribution:'random' as const,sourceYDistribution:'rows' as const,sourceSnap:false};
+  const s={...DEFAULTS,rows:8,columns:8,sourceXDistribution:'random' as const,sourceYDistribution:'rows' as const,sourceSnap:false};
   for(let row=0;row<8;row++)for(let col=0;col<8;col++){
    const xy=sourcePositionAt(s,row,col);
    expect(xy[1]).toBe((row+.5)/8);

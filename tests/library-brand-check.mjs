@@ -9,7 +9,7 @@ try{
  const canvas=page.getByLabel('Generative composition preview',{exact:true});
  const settle=async()=>{await expect(canvas).toHaveAttribute('aria-busy','false',{timeout:30000});await expect(page.getByRole('alert')).toHaveCount(0);};
  const hash=()=>canvas.evaluate(c=>{let h=0;const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;for(let i=0;i<d.length;i+=37)h=Math.imul(h,31)+d[i]|0;return h;});
- await expect(page.getByText('8 images in the mix')).toBeVisible();await settle();
+ await expect(page.getByText('2 images in the mix')).toBeVisible();await settle();
  const library=await(await page.request.get(base+'/image-library.json')).json(),fresh=library.filter(i=>i.addedAt==='2026-10-26');
  assert.equal(library.length,37);assert.equal(fresh.length,12);assert.equal(new Set(library.map(i=>i.id)).size,library.length);
  await page.getByLabel('Show images',{exact:true}).selectOption('new');await expect(page.locator('.image-select')).toHaveCount(12);

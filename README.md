@@ -62,6 +62,12 @@ Hosting shares the application and bundled image library. Uploaded images and pr
 - Scale cells uniformly, randomly, with coherent noise, or with a gradient. Add rotation, random rotation, and mirroring. Scale above 1 and rotation intentionally permit overlapping cells.
 - The **seed** controls all randomness. **Regenerate** randomizes visual and motion parameters across the composition, zoom, source positions, masks, color, and print screens. Paper color, print dimensions, DPI, and selected images stay fixed. Generated grids are square about 90% of the time, with square sizes starting at 2 × 2. The remainder splits between single-row/single-column strips (such as 1 × 12 or 12 × 1) and other rectangles. Manual row/column controls still allow any size from 1 to 80. Regenerate releases pins because the grid itself can change. **Undo regenerate** restores the previous settings; **New seed** in the sidebar varies only the current recipe. Rendering is deterministic for the same recipe and source images (minor rasterization differences between browsers are possible).
 
+## Image weave
+
+New sessions start with **Image weave**: two portraits interleaved in a 12 × 12 checkerboard. Existing sessions are preserved; load **Presets → Image weave** to try the default.
+
+Choose **Pick fragments → Reconstruct images** and **Arrange by → Checkerboard**, then select any two images in the library. Each photograph covers the entire composition without stretching (center-cropped to fit), and each output cell shows the matching piece of one photograph: A/B across the first row, B/A across the next. Rows and columns automatically determine the source slices, including rectangular grids and 1 × N strips. Source slicing controls apply to the other fragment modes. With more images selected, Checkerboard cycles through them diagonally. Masks, spacing, cell zoom, and print screens remain independent options.
+
 ## Connected contours
 
 Choose **Compose → Distribution → Connected contours**, or load **Connected landscapes** from Presets. Fragments are chosen using the light/dark profiles and contour crossings along neighboring edges. A bounded, seeded search balances edge continuity, image detail, reuse, and source diversity. Crop freedom and alignment rotation offer alternative crops; alignment rotates the photograph inside its fixed cell, preserving grid boundaries.
@@ -72,7 +78,7 @@ Use **Pin fragments**, then click cells to lock/unlock their crops. Keyboard use
 
 ## Cell zoom
 
-Load **Portrait / detail** for a face-to-detail study using a bundled portrait. This starter selects its own source image. Other starters retain your image selection. Load **Spiral zoom**, **Modular zoom**, or **Zoom terraces** from Presets. In **Compose → Cell zoom**, choose a single image or apply magnifications to the selected fragments. This changes only the photographic crop: it adds no tone blending, contrast adjustment, or distant-image overlay. Masks and print screens can be combined with zoom independently.
+Load **Portrait / detail** for a face-to-detail study using a bundled portrait. This starter selects its own source image. Image weave also selects its own pair; other starters retain your image selection. Load **Spiral zoom**, **Modular zoom**, or **Zoom terraces** from Presets. In **Compose → Cell zoom**, choose a single image or apply magnifications to the selected fragments. This changes only the photographic crop: it adds no tone blending, contrast adjustment, or distant-image overlay. Masks and print screens can be combined with zoom independently.
 
 Set **Zoom levels** (1–16), **Min zoom**, and **Max zoom** (1×–1024×). 1× covers the cell; larger values crop closer. Levels are evenly spaced by ratio, so three levels between 1× and 4× are 1×, 2×, and 4×. One level uses Min zoom. The default range is 1×–32×, and the modular/terrace starters extend to 128× and 256×. At extreme magnification, small source details become broad areas of color; source resolution limits detail.
 

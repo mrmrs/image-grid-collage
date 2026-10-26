@@ -16,7 +16,7 @@ try{
  await page.goto('http://127.0.0.1:5173');await settled();
  const initial=await fingerprint();
  for(const mode of ['random','gradient','radial','noise','color','luminance','checkerboard','stripes','ordered']){await page.getByLabel('Arrange by',{exact:true}).selectOption(mode);await settled();assert.equal(await page.getByRole('alert').count(),0);}
- await page.getByLabel('Arrange by',{exact:true}).selectOption('noise');await settled();assert.equal(await fingerprint(),initial);
+ await page.getByLabel('Arrange by',{exact:true}).selectOption('checkerboard');await settled();assert.equal(await fingerprint(),initial);
  for(const mask of ['circle','diamond','triangle','hexagon','arch','mixed','square']){await page.getByRole('button',{name:`${mask} mask`,exact:true}).click();await settled();}
  await page.getByRole('button',{name:'None',exact:true}).click();await expect(page.getByText('Start with an image.')).toBeVisible();
  await page.getByRole('button',{name:'All',exact:true}).click();await settled();
