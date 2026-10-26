@@ -2,6 +2,8 @@ import {bounds,cloneSettings,DEFAULTS,normalizeSettings,settingEnums} from '../m
 import type {Settings} from '../model';
 import {random} from './math';
 
+const GRID_SIZES=[2,3,4,5,6,8,12,16,18,24,28] as const;
+
 /** A reproducible new recipe. Paper color, physical output and the user's source collection stay fixed. */
 export function regenerateSettings(current:Settings,seed:number):Settings{
   let channel=0;
@@ -18,9 +20,18 @@ export function regenerateSettings(current:Settings,seed:number):Settings{
     else if(typeof values[key]==='boolean')values[key]=r()<.5;
     else if(typeof values[key]==='string')values[key]=color();
   }
+  // 90% squares, 5% strips, 5% other rectangles. Never generate a 1×1 grid.
+  // Mix the seed before independent grid draws so consecutive seeds explore every shape.
+  const gridSeed=Math.floor(random(seed,0,131)*4294967296);
+  const size=GRID_SIZES[Math.floor(random(gridSeed,0,197)*GRID_SIZES.length)],layout=random(gridSeed,1,197);
+  let rows:number=size,columns:number=size;
+  if(layout>=.9){
+    if(layout<.95){if(random(gridSeed,2,197)<.5)rows=1;else columns=1;}
+    else {const otherSizes=GRID_SIZES.filter(n=>n!==rows);columns=otherSizes[Math.floor(random(gridSeed,2,197)*otherSizes.length)];}
+  }
   // Sample useful ranges without making most compositions tiny, over-rotated, or unreadable.
   Object.assign(next,{
-    seed,cellPins:[],rows:pick([6,8,12,16,18,24,28]),columns:pick([6,8,12,16,18,24,28]),
+    seed,cellPins:[],rows,columns,
     sourceRows:pick([2,3,4,6,8,12]),sourceColumns:pick([2,3,4,6,8,12]),
     gap:pick([0,0,1,2,4,8]),margin:pick([0,2,4,6,8]),
     scale:between(.8,1.15),variation:between(.05,.5),rotation:pick([0,0,0,45,90,-45]),rotationJitter:pick([0,0,3,8,15]),

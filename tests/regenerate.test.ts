@@ -16,6 +16,15 @@ describe('full recipe regeneration',()=>{
   for(const key of Object.keys(DEFAULTS) as (keyof typeof DEFAULTS)[])if(!fixed.includes(key))expect(new Set(recipes.map(s=>JSON.stringify(s[key]))).size,`${key} must vary`).toBeGreaterThan(1);
   expect(regenerateSettings(DEFAULTS,18)).toEqual(regenerateSettings(DEFAULTS,18));
  });
+ it('favors square grids while exploring small grids, rectangles and both strip orientations',()=>{
+  const grids=Array.from({length:5000},(_,seed)=>regenerateSettings(DEFAULTS,seed));
+  const squareRate=grids.filter(s=>s.rows===s.columns).length/grids.length;
+  expect(squareRate).toBeGreaterThan(.88);expect(squareRate).toBeLessThan(.92);
+  const shapes=new Set(grids.map(s=>`${s.rows}x${s.columns}`));
+  for(const shape of ['2x2','3x3','4x4','1x12','12x1'])expect(shapes.has(shape),shape).toBe(true);
+  expect(grids.some(s=>s.rows>1&&s.columns>1&&s.rows!==s.columns)).toBe(true);
+  expect(grids.every(s=>s.rows*s.columns>=2)).toBe(true);
+ });
  it('handles an empty source library',()=>{
   expect(regenerateSettings(DEFAULTS,5)).toMatchObject({selectedIds:[],multiscaleSource:''});
  });
