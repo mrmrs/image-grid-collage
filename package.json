@@ -13,7 +13,9 @@
     "test:motion": "node tests/motion-check.mjs && node tests/motion-autoplay-check.mjs",
     "test:visual": "node tests/visual-render-check.mjs && node tests/visual-systems-check.mjs",
     "deploy": "npm run build && wrangler deploy",
-    "deploy:check": "npm run build && wrangler deploy --dry-run"
+    "deploy:check": "npm run build && wrangler deploy --dry-run",
+    "assets:brand": "node scripts/generate-brand-assets.mjs",
+    "test:library": "node tests/library-brand-check.mjs"
   },
   "dependencies": {
     "ag-psd": "^29.0.0",

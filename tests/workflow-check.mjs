@@ -21,7 +21,7 @@ try{
  await page.getByRole('button',{name:'None',exact:true}).click();await expect(page.getByText('Start with an image.')).toBeVisible();
  await page.getByRole('button',{name:'All',exact:true}).click();await settled();
  const library=JSON.parse(await fs.readFile('public/image-library.json','utf8'));
- await page.locator('input[type=file][multiple]').setInputFiles(`public${library[0].src}`);await expect(page.getByText('26 images in the mix')).toBeVisible();await settled();
+ await page.locator('input[type=file][multiple]').setInputFiles(`public${library[0].src}`);await expect(page.getByText(`${library.length+1} images in the mix`)).toBeVisible();await settled();
  await page.getByRole('button',{name:'Save preset',exact:true}).click();await page.getByLabel('Preset name',{exact:true}).fill('Portable upload study');await page.getByRole('dialog').getByRole('button',{name:'Save preset',exact:true}).click();
  await page.getByRole('button',{name:'presets',exact:true}).click();
  const backup=await saveDownload(()=>page.getByRole('button',{name:'Backup',exact:true}).click(),'fieldwork-backup.json');const recipe=JSON.parse(backup);assert.equal(recipe.uploads.length,1);assert.equal(recipe.presets.length,1);
@@ -38,6 +38,6 @@ try{
  await page.getByRole('button',{name:'Export',exact:true}).click();await page.getByLabel('Print width',{exact:true}).fill('1');await page.getByLabel('Print height',{exact:true}).fill('1');
  const spotBytes=await saveDownload(()=>page.getByRole('button',{name:'ZIP Print package + editable layers',exact:false}).click(),'fieldwork-spot.zip');
  const spot=readPsd(unzipSync(spotBytes)['layers.psd'],{useImageData:true});assert.equal(spot.children.length,3);assert.equal(spot.children[1].name,'Ocean');assert.equal(spot.children[1].hidden,true);
- const second=await context.newPage();await second.goto('http://127.0.0.1:5173');await second.locator('input[type=file][accept=".json,application/json"]').setInputFiles(path.join(os.tmpdir(),'fieldwork-backup.json'));await expect(second.getByText('Recipe imported',{exact:true})).toBeVisible();await expect(second.getByText('26 images in the mix')).toBeVisible();
+ const second=await context.newPage();await second.goto('http://127.0.0.1:5173');await second.locator('input[type=file][accept=".json,application/json"]').setInputFiles(path.join(os.tmpdir(),'fieldwork-backup.json'));await expect(second.getByText('Recipe imported',{exact:true})).toBeVisible();await expect(second.getByText(`${library.length+1} images in the mix`)).toBeVisible();
  assert.deepEqual(errors,[]);console.log('Verified all arrangements/masks, empty state, uploads, portable backup/import, CMYK and spot PSD layers, all screens; no browser errors.');
 }finally{await browser.close();}

@@ -8,7 +8,7 @@ export interface CellPin { cell:number; sourceId:string; sx:number; sy:number; s
 export interface Settings {
   contourContinuity:number; contourBreaks:number; contourDiversity:number; contourCrop:number; contourTurn:number; cellPins:CellPin[];
   multiscale:boolean; multiscaleSource:string; multiscaleMode:'fragments'|'echo';
-  zoomLevels:number;zoomMin:number;zoomMax:number;zoomDistribution:ZoomDistribution;zoomRepeats:number;zoomTurns:number;zoomPhase:number;zoomReverse:boolean;
+  zoomLevels:number;zoomMin:number;zoomMax:number;zoomDistribution:ZoomDistribution;zoomRepeats:number;zoomTurns:number;zoomPhase:number;zoomReverse:boolean;zoomContrast:number;
   sourceXDistribution:PositionDistribution;sourceYDistribution:PositionDistribution;sourceXMin:number;sourceXMax:number;sourceYMin:number;sourceYMax:number;sourcePositionRepeats:number;sourcePositionPhase:number;sourceSnap:boolean;
   screenMode:'regular'|'contour'; flowStrength:number; flowSmoothing:number; flowLength:number; flowDivergence:number; flowAcrossCells:boolean;
   rows: number; columns: number; sourceRows: number; sourceColumns: number;
@@ -24,13 +24,13 @@ export interface Settings {
   motionDuration: number; motionIntensity: number; motionHold: number; motionGroupSize: number; motionOverlap: number;
   motionDirection: 'forward' | 'reverse'; motionLoop: boolean; motionSeedStep: number;
 }
-export interface SourceImage { id: string; title: string; author: string; url: string; src: string; custom?: boolean }
+export interface SourceImage { id: string; title: string; author: string; url: string; src: string; thumbnail?:string; category?:string; addedAt?:string; custom?: boolean }
 export interface Revision { id: string; createdAt: string; settings: Settings; note: string }
 export interface Preset { id: string; name: string; revisions: Revision[] }
 export const DEFAULTS: Settings = {
   contourContinuity:.85,contourBreaks:.08,contourDiversity:.35,contourCrop:.2,contourTurn:6,cellPins:[],
   multiscale:false,multiscaleSource:'',multiscaleMode:'echo',
-  zoomLevels:5,zoomMin:1,zoomMax:32,zoomDistribution:'spiral',zoomRepeats:3,zoomTurns:2,zoomPhase:0,zoomReverse:false,
+  zoomLevels:5,zoomMin:1,zoomMax:32,zoomDistribution:'spiral',zoomRepeats:3,zoomTurns:2,zoomPhase:0,zoomReverse:false,zoomContrast:0,
   sourceXDistribution:'columns',sourceYDistribution:'rows',sourceXMin:0,sourceXMax:100,sourceYMin:0,sourceYMax:100,sourcePositionRepeats:3,sourcePositionPhase:0,sourceSnap:true,
   screenMode:'regular',flowStrength:.65,flowSmoothing:2,flowLength:3,flowDivergence:.7,flowAcrossCells:true,
   rows: 8, columns: 8, sourceRows: 4, sourceColumns: 4, gap: 5, margin: 6,
@@ -52,9 +52,10 @@ export const DEFAULTS: Settings = {
   motionGroupSize: 4, motionOverlap: .65, motionDirection: 'forward', motionLoop: true, motionSeedStep: 1,
 };
 export const STARTERS: { name: string; description: string; patch: Partial<Settings>; swatch: string }[] = [
-  { name: 'Spiral zoom', description: 'One image · five magnifications', patch: {multiscale:true,rows:18,columns:18,gap:0,margin:4,zoomDistribution:'spiral'}, swatch:'field' },
-  { name: 'Modular zoom', description: 'Repeated spirals · six magnifications', patch: {multiscale:true,rows:24,columns:24,gap:2,margin:4,zoomDistribution:'tiled-spiral',zoomRepeats:3,zoomLevels:6,zoomMax:64,sourceXDistribution:'tiled',sourceYDistribution:'tiled'}, swatch:'prisms' },
-  { name: 'Zoom terraces', description: 'Ordered bands of photographic scale', patch: {multiscale:true,rows:12,columns:12,gap:1,margin:4,zoomDistribution:'diagonal',zoomLevels:6,zoomMax:96,sourceXDistribution:'spiral',sourceYDistribution:'spiral'}, swatch:'field' },
+  { name: 'Portrait / detail', description: 'Faces, eyes & abstract fragments', patch: {selectedIds:['h1zwnZNp1fI'],multiscale:true,rows:12,columns:12,gap:1,margin:4,zoomLevels:4,zoomMin:1,zoomMax:24,zoomContrast:.85,zoomDistribution:'checkerboard',sourceSnap:false,sourceXMin:22,sourceXMax:78,sourceYMin:15,sourceYMax:65}, swatch:'portrait' },
+  { name: 'Spiral zoom', description: 'Wide views · close details', patch: {multiscale:true,rows:18,columns:18,gap:0,margin:4,zoomDistribution:'spiral',zoomContrast:.8,zoomLevels:4,zoomMax:64}, swatch:'field' },
+  { name: 'Modular zoom', description: 'Repeated spirals · six magnifications', patch: {multiscale:true,rows:24,columns:24,gap:2,margin:4,zoomDistribution:'tiled-spiral',zoomRepeats:3,zoomLevels:6,zoomMax:128,zoomContrast:.75,sourceXDistribution:'tiled',sourceYDistribution:'tiled'}, swatch:'prisms' },
+  { name: 'Zoom terraces', description: 'Ordered bands of photographic scale', patch: {multiscale:true,rows:12,columns:12,gap:1,margin:4,zoomDistribution:'diagonal',zoomLevels:6,zoomMax:256,zoomContrast:.75,sourceXDistribution:'spiral',sourceYDistribution:'spiral'}, swatch:'field' },
   { name: 'Connected landscapes', description: 'Fragments follow their neighbors', patch: {distribution:'contour',rows:9,columns:9,gap:0,contourBreaks:.03}, swatch:'prisms' },
   { name: 'Contour engraving', description: 'Curved screens follow light and shade', patch: {halftone:true,screenMode:'contour',pattern:'lines',separation:'spot',rows:5,columns:5,gap:0,lpi:16,flowStrength:.75}, swatch:'duo' },
   { name: 'Field notes', description: 'An unexpected landscape', patch: {}, swatch: 'field' },
@@ -76,7 +77,7 @@ export const settingEnums: Record<string, string[]> = {
 };
 export const bounds: Record<string, [number, number]> = {
   contourContinuity:[0,1],contourBreaks:[0,1],contourDiversity:[0,1],contourCrop:[0,.5],contourTurn:[0,20],
-  zoomLevels:[1,16],zoomMin:[1,256],zoomMax:[1,256],zoomRepeats:[1,8],zoomTurns:[.25,6],zoomPhase:[0,1],sourceXMin:[0,100],sourceXMax:[0,100],sourceYMin:[0,100],sourceYMax:[0,100],sourcePositionRepeats:[1,12],sourcePositionPhase:[0,1],
+  zoomLevels:[1,16],zoomMin:[1,1024],zoomMax:[1,1024],zoomContrast:[0,1],zoomRepeats:[1,8],zoomTurns:[.25,6],zoomPhase:[0,1],sourceXMin:[0,100],sourceXMax:[0,100],sourceYMin:[0,100],sourceYMax:[0,100],sourcePositionRepeats:[1,12],sourcePositionPhase:[0,1],
   flowStrength:[0,1],flowSmoothing:[.3,8],flowLength:[1,8],flowDivergence:[0,1],
   motionDuration: [.15,3], motionIntensity: [0,1], motionHold: [0,8], motionGroupSize: [2,64], motionOverlap: [0,.9], motionSeedStep: [1,10000],
   rows: [1,80], columns: [1,80], sourceRows: [1,24], sourceColumns: [1,24], gap: [0,50], margin: [0,30],

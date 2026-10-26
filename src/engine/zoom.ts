@@ -35,7 +35,10 @@ export function zoomLevelAt(s:Settings,row:number,col:number){
     case 'noise':t=noise(x*s.zoomRepeats,y*s.zoomRepeats,s.seed);break;
     case 'random':t=random(s.seed,row*s.columns+col,61);break;
   }
-  const level=Math.min(s.zoomLevels-1,Math.floor(clamp(t)*s.zoomLevels));
+  // Pull field values toward the endpoints, keeping spatial order and the exact zoom bounds.
+  const centered=2*clamp(t)-1;
+  const emphasized=.5+.5*Math.sign(centered)*Math.abs(centered)**(1/(1+8*s.zoomContrast));
+  const level=Math.min(s.zoomLevels-1,Math.floor(clamp(emphasized)*s.zoomLevels));
   return s.zoomReverse?s.zoomLevels-1-level:level;
 }
 export function zoomGrid(s:Settings){

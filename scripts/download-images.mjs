@@ -13,5 +13,11 @@ for (const [index, image] of library.entries()) {
   if (bytes[0] !== 0xff || bytes[1] !== 0xd8) throw new Error(`${image.id}: response is not a JPEG`);
   const output = path.join(root, 'public', image.src.replace(/^\//, ''));
   await writeFile(output, bytes);
+  if(image.thumbnailUrl){
+    const thumbnail=await fetch(image.thumbnailUrl);
+    if(!thumbnail.ok)throw new Error(`${image.id} thumbnail: HTTP ${thumbnail.status}`);
+    const target=path.join(root,'public',image.thumbnail.replace(/^\//,''));
+    await mkdir(path.dirname(target),{recursive:true});await writeFile(target,Buffer.from(await thumbnail.arrayBuffer()));
+  }
   console.log(`${index + 1}/${library.length} ${image.title} — ${image.author}`);
 }

@@ -26,7 +26,7 @@ export function regenerateSettings(current:Settings,seed:number):Settings{
     scale:between(.8,1.15),variation:between(.05,.5),rotation:pick([0,0,0,45,90,-45]),rotationJitter:pick([0,0,3,8,15]),
     saturation:between(.85,1.2),contrast:between(.85,1.2),background:pick(['#f2efe7','#f8f7f3','#151b1a',color()]),
     multiscale:r()<.85,multiscaleMode:pick(['echo','echo','fragments']),multiscaleSource:pick(current.selectedIds)??'',
-    zoomMin:pick([1,1,1,1.5,2]),zoomMax:pick([8,16,32,64,128,256]),zoomLevels:pick([2,3,4,5,6,8]),
+    zoomMin:pick([1,1,1,1.5,2]),zoomMax:pick([16,32,64,128,256,512,1024]),zoomLevels:pick([2,3,4,5,6,8]),
     sourceXMin:between(0,25),sourceXMax:between(75,100),sourceYMin:between(0,25),sourceYMax:between(75,100),
     contourCrop:between(0,.3),contourTurn:pick([0,3,6,12]),
     halftone:r()<.3,lpi:between(8,32),gain:between(-.15,.2),flowStrength:between(.2,.85),

@@ -16,7 +16,7 @@ try{
   const small=renderGrid(tiles,settings,600,600),large=renderGrid(tiles,settings,1800,1800),scaleError=rmse(sample(small,200),sample(large,200));
   const directErrors=[];
   // Independently draw the centered square crop at several magnifications. No tone processing is expected.
-  for(const zoom of [1,2,7,256]){
+  for(const zoom of [1,2,7,1024]){
    const s={...settings,rows:1,columns:1,zoomLevels:1,zoomMin:zoom,zoomMax:zoom,sourceSnap:false},image=images[0].image;
    const output=renderGrid(tiles,s,300,300),reference=new OffscreenCanvas(300,300),ctx=reference.getContext('2d',{willReadFrequently:true});
    const size=Math.min(image.width,image.height)/zoom;ctx.imageSmoothingQuality='high';ctx.drawImage(image,(image.width-size)/2,(image.height-size)/2,size,size,0,0,300,300);

@@ -19,7 +19,7 @@ npm test       # engine, screen coverage, recipe validation, independent TIFF de
 npm run preview
 ```
 
-`npm run test:browser` exercises the live UI, preset restoration, responsive layout, and downloads using installed Google Chrome. `npm run test:workflow` also checks every distribution and mask, uploads, backups, imports, custom inks, and full 3000 × 3000 TIFF/PSD decoding. Start the development server on port 5173 first. `npm run test:motion` checks autoplay, live edits, pause/stop opt-out, animation endpoints, caching, looping, controls, persistence, exports, and reduced motion in Chrome. `npm run test:visual` checks the new systems together, verifies photographic crop accuracy, unchanged colors across all eleven zoom distributions, and resolution consistency, and verifies pins, presets, animation, mobile layout, and a combined 300 DPI print package. Test artifacts are saved under the system temporary directory.
+`npm run test:browser` exercises the live UI, preset restoration, responsive layout, and downloads using installed Google Chrome. `npm run test:workflow` also checks every distribution and mask, uploads, backups, imports, custom inks, and full 3000 × 3000 TIFF/PSD decoding. Start the development server on port 5173 first. `npm run test:motion` checks autoplay, live edits, pause/stop opt-out, animation endpoints, caching, looping, controls, persistence, exports, and reduced motion in Chrome. `npm run test:visual` checks the new systems together, verifies photographic crop accuracy, unchanged colors across all eleven zoom distributions, and resolution consistency, and verifies pins, presets, animation, mobile layout, and a combined 300 DPI print package. `npm run test:library` checks source filters, the portrait preset, scale contrast, image decoding, and static share metadata/icons. Test artifacts are saved under the system temporary directory.
 
 ## Hosting on Cloudflare
 
@@ -54,7 +54,7 @@ Hosting shares the application and bundled image library. Uploaded images and pr
 
 ## Compose
 
-- Select any number of the 25 local Unsplash photographs, or upload/drop JPEG, PNG, WebP, AVIF, or GIF images. Animated files use a still frame. Credits are linked beneath each thumbnail and in [SOURCES.md](SOURCES.md).
+- Select any number of the 37 local Unsplash photographs, or upload/drop JPEG, PNG, WebP, AVIF, or GIF images. Animated files use a still frame. Use the library filters for new images, portraits, hands/figures, architecture, landscapes, flowers, or abstract textures. **All** selects the images in the current view. Credits are linked beneath each thumbnail and in [SOURCES.md](SOURCES.md).
 - **Source slicing**, beneath the image library, controls how many rows/columns each source image is cut into. This is independent of the output grid. Fragments cover their cells without distortion.
 - Configure output rows/columns, cell gaps, paper margin/color, and image adjustments.
 - Ten arrangements: connected contours, random, linear gradient, radial gradient, smooth noise, color selection, luminance, checkerboard, stripes, and sequential. Color and luminance modes choose fragments by their sampled colors; other modes choose images first, then their fragments. Source ordering follows library order.
@@ -72,11 +72,11 @@ Use **Pin fragments**, then click cells to lock/unlock their crops. Keyboard use
 
 ## Cell zoom
 
-Load **Spiral zoom**, **Modular zoom**, or **Zoom terraces** from Presets. In **Compose → Cell zoom**, choose a single image or apply magnifications to the selected fragments. This changes only the photographic crop: it adds no tone blending, contrast adjustment, or distant-image overlay. Masks and print screens can be combined with zoom independently.
+Load **Portrait / detail** for a face-to-detail study using a bundled portrait. This starter selects its own source image. Other starters retain your image selection. Load **Spiral zoom**, **Modular zoom**, or **Zoom terraces** from Presets. In **Compose → Cell zoom**, choose a single image or apply magnifications to the selected fragments. This changes only the photographic crop: it adds no tone blending, contrast adjustment, or distant-image overlay. Masks and print screens can be combined with zoom independently.
 
-Set **Zoom levels** (1–16), **Min zoom**, and **Max zoom** (1×–256×). 1× covers the cell; larger values crop closer. Levels are evenly spaced by ratio, so three levels between 1× and 4× are 1×, 2×, and 4×. One level uses Min zoom. The default range is 1×–32×, and the modular/terrace starters extend to 64× and 96×. At extreme magnification, small source details become broad areas of color; source resolution limits detail.
+Set **Zoom levels** (1–16), **Min zoom**, and **Max zoom** (1×–1024×). 1× covers the cell; larger values crop closer. Levels are evenly spaced by ratio, so three levels between 1× and 4× are 1×, 2×, and 4×. One level uses Min zoom. The default range is 1×–32×, and the modular/terrace starters extend to 128× and 256×. At extreme magnification, small source details become broad areas of color; source resolution limits detail.
 
-Eleven distributions arrange these levels: spiral, tiled spirals, concentric rings, center outward, diagonal steps, row steps, column steps, alternating levels, repeating sequence, smooth noise, and random. Spirals offer turns and phase controls; tiled spirals repeat a shared module across the grid. Rings have repeat and phase controls. Reverse the zoom order to invert any pattern. The small zoom map shows placement, with lighter cells representing higher magnification.
+Eleven distributions arrange these levels: spiral, tiled spirals, concentric rings, center outward, diagonal steps, row steps, column steps, alternating levels, repeating sequence, smooth noise, and random. Spirals offer turns and phase controls; tiled spirals repeat a shared module across the grid. Rings have repeat and phase controls. **Scale contrast** pushes more cells toward the minimum and maximum zooms, reducing the middle scales while preserving the pattern’s spatial order. It changes crop magnification only. Zero keeps balanced level placement; higher values create stronger jumps. Reverse the zoom order to invert any pattern. The small zoom map shows placement, with lighter cells representing higher magnification.
 
 **Source positions** independently determines where each crop is centered. Choose an X distribution and a Y distribution: across columns, across rows, scan source grid, random, smooth noise, spiral path, repeated modules, or fixed position. Mix different patterns on the two axes. Position repeats and phase control the paths independently of zoom. Source coordinate ranges restrict the sampled area; fixed position uses the midpoint of its range. **Snap to source cells** uses the centers of the source slicing grid; turn it off for continuous coordinates. Zoom remains anchored to that source position, shifting only when necessary to keep the crop inside the image. With Selected fragments, positions are relative to each fragment.
 
@@ -88,7 +88,7 @@ Zoom settings are saved in preset versions and backups. Older multi-scale recipe
 
 The working session autosaves to IndexedDB after a short debounce; wait for **Saved locally** before closing/reloading. Presets contain immutable revisions of all composition/print settings, source IDs, and seed. Restoring a version does not overwrite it; **Save version** appends a revision, and **Save as new preset** branches into a separate preset.
 
-Ten starting points are included, including Spiral zoom, Modular zoom, Zoom terraces, Connected landscapes, and Contour engraving. **Presets → Backup** exports the current settings, every preset/revision, and uploaded images to JSON. Import merges presets and uploads and loads the supplied working settings. The 25 bundled source images are referenced by stable IDs. Backups are portable between copies of this project. Browser storage is local to the origin and can be cleared by the browser, so keep JSON backups of work you want to retain.
+Eleven starting points are included, including Portrait / detail, Spiral zoom, Modular zoom, Zoom terraces, Connected landscapes, and Contour engraving. **Presets → Backup** exports the current settings, every preset/revision, and uploaded images to JSON. Import merges presets and uploads and loads the supplied working settings. The 37 bundled source images are referenced by stable IDs. Backups are portable between copies of this project. Browser storage is local to the origin and can be cleared by the browser, so keep JSON backups of work you want to retain.
 
 ## Motion
 
@@ -163,6 +163,12 @@ The composite is an RGB proof, not a CMYK TIFF. There is no embedded ICC profile
 To add a distribution, extend the schema and `chooseTile`, then add it to the Arrange by selector. To add a zoom distribution, extend `ZoomDistribution`, its validation enum, and `ZOOM_DISTRIBUTIONS` / `zoomLevelAt` in `zoom.ts`. To add a mask, extend `maskPath`. To add a halftone, extend `screenThreshold` and add an area-coverage test. Keep sampling decisions independent of output pixel size so exports match previews.
 
 Compose and Print use custom controls; Motion uses DialKit’s Slider, SelectControl, and Toggle. All controls write to the same serializable settings and immutable preset history. The render and animation engines are independent of React.
+
+## Brand assets
+
+The header and favicon share the four-cell Fieldwork mark in `public/brand-mark.svg`. `public/favicon.svg`, a 32 px PNG favicon, and a 180 px Apple touch icon use the same geometry and palette. The 1200 × 630 OG card uses the live rendering engine, bundled fonts, and a credited portrait. Static Open Graph and Twitter tags in `index.html` point to the published image with dimensions and alt text, so crawlers do not need JavaScript.
+
+With Vite running locally, `npm run assets:brand` regenerates the PNG assets. If the public hostname changes, update the canonical, OG URL, and absolute image URLs in `index.html`.
 
 ## Asset credits
 

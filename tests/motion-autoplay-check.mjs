@@ -67,7 +67,7 @@ try{
  await tab('Restart sequence');await playing();
  // Empty image selection suspends playback; selecting images restores it automatically.
  await tab('None');await expect(animated).toBeHidden();
- await tab('All');await expect(page.getByText('25 images in the mix')).toBeVisible();await playing();
+ await tab('All');const libraryCount=await page.locator('.image-select').count();await expect(page.getByText(`${libraryCount} images in the mix`)).toBeVisible();await playing();
  await page.getByRole('button',{name:'Cell grouping Small groups',exact:true}).click();
  await page.getByRole('option',{name:'All together',exact:true}).click();
  await tab('Animate one variation');

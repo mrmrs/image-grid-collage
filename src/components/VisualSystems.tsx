@@ -13,9 +13,10 @@ export function MultiscaleControls({settings:s,patch,images}:{images:SourceImage
     {s.multiscale&&<>
       <Select label="Zoom content" value={s.multiscaleMode} options={[["echo","Single image"],["fragments","Selected fragments"]]} onChange={multiscaleMode=>patch({multiscaleMode:multiscaleMode as Settings['multiscaleMode']})}/>
       {s.multiscaleMode==='echo'&&<><Select label="Zoom image" value={images.some(i=>i.id===s.multiscaleSource)?s.multiscaleSource:''} options={[["","First selected image"],...images.map(i=>[i.id,i.title] as const)]} onChange={multiscaleSource=>patch({multiscaleSource})}/>
-      {image&&<div className="zoom-source"><img src={image.src} alt="Zoom source"/><span>{image.title}</span></div>}</>}
+      {image&&<div className="zoom-source"><img src={image.thumbnail??image.src} alt="Zoom source"/><span>{image.title}</span></div>}</>}
       <Slider label="Zoom levels" value={s.zoomLevels} onChange={zoomLevels=>patch({zoomLevels})} min={1} max={16}/>
-      <div className="two-columns"><NumberField label="Min zoom" value={s.zoomMin} min={1} max={256} step={.25} suffix="×" onChange={zoomMin=>patch({zoomMin,zoomMax:Math.max(zoomMin,s.zoomMax)})}/><NumberField label="Max zoom" value={s.zoomMax} min={1} max={256} step={.25} suffix="×" onChange={zoomMax=>patch({zoomMax,zoomMin:Math.min(zoomMax,s.zoomMin)})}/></div>
+      <div className="two-columns"><NumberField label="Min zoom" value={s.zoomMin} min={1} max={1024} step={.25} suffix="×" onChange={zoomMin=>patch({zoomMin,zoomMax:Math.max(zoomMin,s.zoomMax)})}/><NumberField label="Max zoom" value={s.zoomMax} min={1} max={1024} step={.25} suffix="×" onChange={zoomMax=>patch({zoomMax,zoomMin:Math.min(zoomMax,s.zoomMin)})}/></div>
+      <Slider label="Scale contrast" value={s.zoomContrast} onChange={zoomContrast=>patch({zoomContrast})} min={0} max={1} step={.01}/>
       <Select label="Zoom distribution" value={s.zoomDistribution} options={ZOOM_DISTRIBUTIONS.map(d=>[d.id,d.label] as const)} onChange={zoomDistribution=>patch({zoomDistribution:zoomDistribution as Settings['zoomDistribution']})}/>
       {['spiral','tiled-spiral'].includes(s.zoomDistribution)&&<Slider label="Spiral turns" value={s.zoomTurns} onChange={zoomTurns=>patch({zoomTurns})} min={.25} max={6} step={.25}/>}
       {['tiled-spiral','rings','noise'].includes(s.zoomDistribution)&&<Slider label={s.zoomDistribution==='tiled-spiral'?'Modules per side':s.zoomDistribution==='rings'?'Ring repeats':'Zoom noise frequency'} value={s.zoomRepeats} onChange={zoomRepeats=>patch({zoomRepeats})} min={1} max={8}/>}
@@ -34,7 +35,7 @@ export function MultiscaleControls({settings:s,patch,images}:{images:SourceImage
         </details>
         <p className="control-hint">Each output cell samples its own source position. X and Y choose where; zoom chooses how close. Fixed position uses the midpoint of its range.{s.multiscaleMode==='fragments'?' Positions are relative to each selected fragment.':''}</p>
       </div>
-      <p className="control-hint">1× fills the cell; higher levels crop closer. Levels are evenly spaced by ratio.{s.zoomLevels===1?' One level uses Min zoom.':''}{s.cellPins.length?' Pinned crops retain their zoom.':''}</p>
+      <p className="control-hint">1× fills the cell; higher levels crop closer. Levels are evenly spaced by ratio. Higher scale contrast favors the widest and closest crops.{s.zoomLevels===1?' One level uses Min zoom.':''}{s.cellPins.length?' Pinned crops retain their zoom.':''}</p>
     </>}
   </Section>;
 }

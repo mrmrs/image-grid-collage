@@ -29,10 +29,10 @@ describe('discrete crop magnifications',()=>{
  it('varies spiral phases and random layouts with the seed',()=>{
   for(const zoomDistribution of ['spiral','rings','noise','random'] as const)expect(zoomGrid({...DEFAULTS,zoomDistribution,seed:1})).not.toEqual(zoomGrid({...DEFAULTS,zoomDistribution,seed:2}));
  });
- it('keeps crops inside their source at 256× and anchors them to distributed positions',()=>{
+ it('keeps crops inside their source at 1024× and anchors them to distributed positions',()=>{
   const tile={sx:100,sy:200,sw:800,sh:600} as Tile,s={...DEFAULTS,sourceXMin:100,sourceXMax:100,sourceYMin:0,sourceYMax:0,sourceSnap:false};
   expect(zoomTile(tile,2,s)).toMatchObject({sx:600,sy:200,sw:300,sh:300});
-  for(const x of [0,50,100])for(const y of [0,50,100])for(const zoom of [1,2,256]){
+  for(const x of [0,50,100])for(const y of [0,50,100])for(const zoom of [1,2,1024]){
    const t=zoomTile(tile,zoom,{...s,width:20,height:5,sourceXMin:x,sourceXMax:x,sourceYMin:y,sourceYMax:y});
    expect(t.sx).toBeGreaterThanOrEqual(100);expect(t.sy).toBeGreaterThanOrEqual(200);expect(t.sx+t.sw).toBeLessThanOrEqual(900);expect(t.sy+t.sh).toBeLessThanOrEqual(800);
   }
@@ -51,7 +51,7 @@ describe('independent source coordinates',()=>{
   const s={...DEFAULTS,rows:4,columns:4,sourceRows:4,sourceColumns:4};
   expect(sourcePositionAt(s,0,0)).toEqual([.125,.125]);expect(sourcePositionAt(s,3,3)).toEqual([.875,.875]);
   const tile={sx:100,sy:200,sw:800,sh:800} as Tile;
-  for(const zoom of [8,32,256]){
+  for(const zoom of [8,32,1024]){
    const crop=zoomTile(tile,zoom,s,1,2);
    expect(crop.sx+crop.sw/2).toBe(600);expect(crop.sy+crop.sh/2).toBe(500);
   }
@@ -83,4 +83,15 @@ describe('independent source coordinates',()=>{
   const s=normalizeSettings({zoomFocusX:50,zoomFocusY:50,zoomMax:256,sourceXDistribution:'spiral',sourceYDistribution:'noise'});
   expect(s).not.toHaveProperty('zoomFocusX');expect(s.zoomMax).toBe(256);expect(normalizeSettings(s)).toEqual(s);
  });
+});
+
+it('increases endpoint frequency without changing zoom bounds or spatial order',()=>{
+ const s={...DEFAULTS,rows:1,columns:80,zoomDistribution:'columns' as const,zoomLevels:8,zoomMin:1,zoomMax:1024};
+ const balanced=zoomGrid(s),strong=zoomGrid({...s,zoomContrast:1});
+ const endpoints=(xs:number[])=>xs.filter(x=>x===1||x===1024).length;
+ expect(endpoints(strong)).toBeGreaterThan(endpoints(balanced)*2);
+ expect(strong[0]).toBe(1);expect(strong.at(-1)).toBe(1024);
+ expect(strong.every((v,i)=>!i||v>=strong[i-1])).toBe(true);
+ expect(zoomGrid({...s,zoomContrast:1,zoomReverse:true})).toEqual([...strong].reverse());
+ expect(normalizeSettings({...s,zoomContrast:1}).zoomMax).toBe(1024);
 });
