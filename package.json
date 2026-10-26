@@ -10,7 +10,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "test:browser": "node tests/browser-check.mjs",
     "test:workflow": "node tests/workflow-check.mjs",
-    "test:motion": "node tests/motion-check.mjs",
+    "test:motion": "node tests/motion-check.mjs && node tests/motion-autoplay-check.mjs",
     "deploy": "npm run build && wrangler deploy",
     "deploy:check": "npm run build && wrangler deploy --dry-run"
   },

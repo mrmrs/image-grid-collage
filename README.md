@@ -19,7 +19,7 @@ npm test       # engine, screen coverage, recipe validation, independent TIFF de
 npm run preview
 ```
 
-`npm run test:browser` exercises the live UI, preset restoration, responsive layout, and downloads using installed Google Chrome. `npm run test:workflow` also checks every distribution and mask, uploads, backups, imports, custom inks, and full 3000 × 3000 TIFF/PSD decoding. Start the development server on port 5173 first. `npm run test:motion` checks animation endpoints, caching, looping, controls, persistence, exports, and reduced motion in Chrome. Test artifacts are saved under the system temporary directory.
+`npm run test:browser` exercises the live UI, preset restoration, responsive layout, and downloads using installed Google Chrome. `npm run test:workflow` also checks every distribution and mask, uploads, backups, imports, custom inks, and full 3000 × 3000 TIFF/PSD decoding. Start the development server on port 5173 first. `npm run test:motion` checks autoplay, live edits, pause/stop opt-out, animation endpoints, caching, looping, controls, persistence, exports, and reduced motion in Chrome. Test artifacts are saved under the system temporary directory.
 
 ## Hosting on Cloudflare
 
@@ -70,7 +70,7 @@ Five starting points are included. **Presets → Backup** exports the current se
 
 ## Motion
 
-Open **Motion** or press the play button beneath the artwork. Five movement studies transition the grid between deterministic seed variations of the current recipe:
+Open **Motion** to start playback automatically, or press the play button beneath the artwork. Five movement studies transition the grid between deterministic seed variations of the current recipe:
 
 - **Silk wave:** diagonal ordering with a horizontal curtain reveal in each cell.
 - **Bloom:** circular reveals moving outward from the center.
@@ -80,9 +80,9 @@ Open **Motion** or press the play button beneath the artwork. Five movement stud
 
 The motion controls use **DialKit 2**, embedded as controlled React components. Choose **One at a time**, **Small groups**, or **All together**. Adjust cells per group, overlap, cell duration, rest, direction, seed increment, and continuous playback. Fireflies and Turn the tiles also offer zoom intensity and fold shading controls. The displayed transition length includes all staggered groups; one-at-a-time enforces zero overlap. Large grids with sequential playback can take a long time by design.
 
-Pause/resume or scrub the progress bar to inspect any moment. **Animate one variation** finishes one transition and pauses. **Restart sequence** starts again at the recipe's seed. **Stop** returns to the still composition. **Keep destination as still** adopts the destination seed—even when paused midway—so it can be saved as a preset version or exported at print resolution. Opening Export returns to the still; it does not export an intermediate animation frame.
+Playback continues as you adjust settings. Pause, Stop, or scrubbing opts out of autoplay for the current session, including when you switch tabs; Play or Restart enables it again. Pause/resume or scrub the progress bar to inspect any moment. **Animate one variation** finishes one transition and pauses. **Restart sequence** starts again at the recipe's seed. **Stop** returns to the still composition. **Keep destination as still** adopts the destination seed—even when paused midway—so it can be saved as a preset version or exported at print resolution. Opening Export returns to the still; it does not export an intermediate animation frame. Leaving Motion or opening a dialog temporarily stops playback; returning resumes it unless you explicitly opted out.
 
-Motion settings travel with preset versions and JSON backups. Existing recipes receive defaults. Playback itself is temporary and never starts automatically on reload. Changes to source images, grid geometry, print appearance, seed increment, or the isolated plate stop/reset the animation. Timing and pattern edits reuse the prepared frames. Hidden tabs pause automatically; reduced-motion preferences replace the movement with a gentle full-frame dissolve.
+Motion settings travel with preset versions and JSON backups. Existing recipes receive defaults. Playback intent is temporary: after reloading, opening Motion starts autoplay again. Changes to source images, grid geometry, print appearance, seed increment, or the isolated plate rebuild the animation and continue automatically while playback is enabled. Timing and pattern edits reuse the prepared frames. Hidden browser tabs pause automatically and resume when visible; reduced-motion preferences replace the movement with a gentle full-frame dissolve.
 
 Variation changes only the seed, so source selection, grid size, masks, distribution, and ink setup stay within the recipe. Fully deterministic arrangements without seed-dependent choices can repeat the same content. Transitions operate on rendered grid regions; shapes and halftones are preserved in each endpoint, while overlapping artwork inside the paper margins dissolves between endpoints.
 

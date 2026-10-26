@@ -28,9 +28,8 @@ export default function App(){
   const fileRef=useRef<HTMLInputElement>(null),importRef=useRef<HTMLInputElement>(null);
   const allImages=useMemo(()=>[...library,...uploads],[library,uploads]);
   const selected=useMemo(()=>allImages.filter(i=>settings.selectedIds.includes(i.id)),[allImages,settings.selectedIds]);
-  const motion=useGridMotion(settings,selected,solo,workerRef,setError);
+  const motion=useGridMotion(settings,selected,solo,workerRef,setError,ready&&tab==='motion'&&!modal);
   const previewKey=artworkKey(settings);
-  useEffect(()=>{if(modal)motion.pause();},[modal]);
   const currentPreset=presets.find(p=>p.id===activePreset);
   const inks=settings.separation==='cmyk'?settings.inks:settings.spotInks;
   const patch=(values:Partial<Settings>)=>setSettings(s=>({...s,...values}));
@@ -136,7 +135,7 @@ export default function App(){
   const visibleImages=filter==='selected'?selected:filter==='uploads'?uploads:allImages;
   const missing=settings.selectedIds.filter(id=>!allImages.some(i=>i.id===id));
   return <div className="app">
-    <header className="topbar"><a className="brand" href="/" aria-label="Fieldwork home"><span className="brand-mark"><i/><i/><i/><i/></span>fieldwork</a><div className="top-actions"><button className="icon-button" aria-label="Studio guide" onClick={()=>setModal('help')}><CircleHelp size={17}/></button><span className="save-status"><span/>{saveStatus}</span><button className="quiet-button" onClick={()=>{setName(currentPreset?.name??name);setModal('save');}}><Save size={15}/>Save preset</button><button className="primary-button" onClick={()=>{motion.stop();setModal('export');}}><ArrowDownToLine size={15}/>Export<ArrowUpRight size={14}/></button></div></header>
+    <header className="topbar"><a className="brand" href="/" aria-label="Fieldwork home"><span className="brand-mark"><i/><i/><i/><i/></span>fieldwork</a><div className="top-actions"><button className="icon-button" aria-label="Studio guide" onClick={()=>setModal('help')}><CircleHelp size={17}/></button><span className="save-status"><span/>{saveStatus}</span><button className="quiet-button" onClick={()=>{setName(currentPreset?.name??name);setModal('save');}}><Save size={15}/>Save preset</button><button className="primary-button" onClick={()=>setModal('export')}><ArrowDownToLine size={15}/>Export<ArrowUpRight size={14}/></button></div></header>
     <div className="workspace">
       <aside className="library-panel"><div className="panel-heading"><div><h2>Image library <span>{allImages.length.toString().padStart(2,'0')}</span></h2></div><button className="icon-button" aria-label="Upload images" onClick={()=>fileRef.current?.click()}><Plus size={19}/></button></div>
         <div className="library-tools"><Select label="Show images" value={filter} onChange={setFilter} options={[['all','All images'],['selected','Selected'],['uploads','Your uploads']]}/><div><button onClick={()=>set('selectedIds',allImages.map(i=>i.id))}>All</button><span>/</span><button onClick={()=>set('selectedIds',[])}>None</button></div></div>

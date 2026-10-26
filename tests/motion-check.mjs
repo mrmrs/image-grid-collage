@@ -15,6 +15,7 @@ const scrub=async value=>{await page.getByRole('slider',{name:'Animation progres
 try{
  await page.goto('http://127.0.0.1:5173');await settle();
  await page.getByRole('button',{name:'motion',exact:true}).click();await page.getByRole('slider',{name:'Cells per group',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Pause grid animation',exact:true}).click();
  const baseJobs=await page.evaluate(()=>window.motionJobs.length);
  await page.getByRole('slider',{name:'Cell duration',exact:true}).press('ArrowRight');
  await page.getByRole('button',{name:'Cell grouping Small groups',exact:true}).click();
@@ -43,14 +44,14 @@ try{
  await page.getByRole('radiogroup',{name:'Keep evolving'}).getByRole('radio',{name:'Off',exact:true}).click();
  // Save motion settings in the existing versioned recipe and reload.
  await page.getByRole('button',{name:'Save preset',exact:true}).click();await page.getByLabel('Preset name',{exact:true}).fill('Living tiles');await page.getByRole('dialog').getByRole('button',{name:'Save preset',exact:true}).click();await expect(page.getByText('Saved locally',{exact:true})).toBeVisible();
- await page.reload();await settle();await page.getByRole('button',{name:'motion',exact:true}).click();await expect(page.getByRole('button',{name:'Tidal rows animation'})).toHaveAttribute('aria-pressed','true');await expect(animated).toBeHidden();
+ await page.reload();await settle();await page.getByRole('button',{name:'motion',exact:true}).click();await expect(page.getByRole('button',{name:'Tidal rows animation'})).toHaveAttribute('aria-pressed','true');await expect(animated).toBeVisible();
  // Halftoned plates can animate, changing the recipe stops playback, exporting returns to a reproducible still.
  await page.getByRole('button',{name:'print',exact:true}).click();await page.getByRole('switch',{name:'Enable halftone'}).check();await settle();await page.getByRole('button',{name:'View Cyan plate'}).click();await settle();
  await page.getByRole('button',{name:'Play grid animation'}).click();await expect(animated).toBeVisible();await scrub(50);await page.screenshot({path:'/tmp/fieldwork-motion-halftone.png'});
  await page.getByRole('button',{name:'Export',exact:true}).click();await expect(animated).toBeHidden();await expect(page.getByRole('dialog')).toBeVisible();await page.getByRole('button',{name:'Close dialog',exact:true}).click();
  await page.getByRole('button',{name:'Play grid animation'}).click();await expect(animated).toBeVisible();await page.getByRole('button',{name:'compose',exact:true}).click();await page.getByRole('spinbutton',{name:'Columns',exact:true}).fill('9');await expect(animated).toBeHidden();await settle();
  await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'motion',exact:true}).click();await page.screenshot({path:'/tmp/fieldwork-motion-mobile.png',fullPage:true});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
- // Reduced motion is opt-in playback with an alternate, gentle rendering path.
- const reduced=await browser.newContext({reducedMotion:'reduce'}),rp=await reduced.newPage();await rp.goto('http://127.0.0.1:5173');await rp.getByRole('button',{name:'motion',exact:true}).click();await expect(rp.getByText('Reduced motion is on: playback uses a gentle dissolve.')).toBeVisible();await expect(rp.locator('canvas[aria-label="Animated composition preview"]')).toBeHidden();await reduced.close();
+ // Reduced motion uses the same autoplay behavior with a gentle rendering path.
+ const reduced=await browser.newContext({reducedMotion:'reduce'}),rp=await reduced.newPage();await rp.goto('http://127.0.0.1:5173');await rp.getByRole('button',{name:'motion',exact:true}).click();await expect(rp.getByText('Reduced motion is on: playback uses a gentle dissolve.')).toBeVisible();await expect(rp.locator('canvas[aria-label="Animated composition preview"]')).toBeVisible();await reduced.close();
  assert.deepEqual(errors,[]);assert.deepEqual(remote,[]);console.log('PASS: five patterns, exact endpoints, cached scrubbing, DialKit inputs, pause/resume, one-shot, keep seed, persistence, halftones, export reset, recipe edits, responsive layout, reduced motion, no remote requests.');
 }finally{await browser.close();}

@@ -34,13 +34,15 @@ export class GridMotionPlayer {
     const sourceChanged=sources.length!==this.sources.length||sources.some((source,i)=>source!==this.sources[i]);
     const oldDuration=this.settings?motionTiming(this.settings).duration:1;
     const fraction=this.elapsed/oldDuration;
-    if(this.key!==key||sourceChanged)this.stop();
+    const changed=this.key!==key||sourceChanged;
+    if(changed)this.stop();
     this.settings=s;this.sources=sources;this.solo=solo;this.key=key;
     if(this.from&&this.to){
       this.elapsed=fraction*motionTiming(s).duration;
       this.starts=cellSchedule(s,this.state.fromSeed);
       this.paint();
     }
+    return changed;
   }
   private publish(patch:Partial<MotionState>){this.state={...this.state,...patch};if(!this.disposed)this.onState(this.state);}
   private render(seed:number):Promise<ImageBitmap>{
@@ -75,7 +77,7 @@ export class GridMotionPlayer {
   async play(once=false){
     if(!this.settings||!this.sources.length||this.disposed)return;
     this.wantsPlay=true;this.once=once;
-    if(this.state.phase==='preparing')return;
+    if(this.state.phase==='preparing'||this.state.phase==='playing')return;
     if(this.from&&this.to){
       if(this.elapsed>=motionTiming(this.settings).duration){await this.advance();return;}
       this.publish({phase:'playing'});this.schedule();return;
