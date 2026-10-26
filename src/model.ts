@@ -1,8 +1,13 @@
-export type Distribution = 'random' | 'gradient' | 'radial' | 'noise' | 'color' | 'luminance' | 'checkerboard' | 'stripes' | 'ordered';
+export type Distribution = 'random' | 'gradient' | 'radial' | 'noise' | 'color' | 'luminance' | 'checkerboard' | 'stripes' | 'ordered' | 'contour';
 export type MotionPattern = 'sweep' | 'ripple' | 'scatter' | 'flip' | 'slide';
 export type Mask = 'square' | 'circle' | 'diamond' | 'triangle' | 'hexagon' | 'arch' | 'mixed';
 export interface Ink { name: string; color: string; angle: number; density: number; enabled: boolean }
+export interface CellPin { cell:number; sourceId:string; sx:number; sy:number; sw:number; sh:number; turn:number }
 export interface Settings {
+  contourContinuity:number; contourBreaks:number; contourDiversity:number; contourCrop:number; contourTurn:number; cellPins:CellPin[];
+  multiscale:boolean; multiscaleSource:string; multiscaleMode:'fragments'|'echo'; multiscaleStrength:number; multiscaleDetail:number;
+  multiscaleCrossover:number; multiscaleZoom:number; echoLevels:number; echoZoom:number;
+  screenMode:'regular'|'contour'; flowStrength:number; flowSmoothing:number; flowLength:number; flowDivergence:number; flowAcrossCells:boolean;
   rows: number; columns: number; sourceRows: number; sourceColumns: number;
   gap: number; margin: number; background: string; distribution: Distribution;
   seed: number; gradientAngle: number; noiseScale: number; chaos: number;
@@ -20,6 +25,9 @@ export interface SourceImage { id: string; title: string; author: string; url: s
 export interface Revision { id: string; createdAt: string; settings: Settings; note: string }
 export interface Preset { id: string; name: string; revisions: Revision[] }
 export const DEFAULTS: Settings = {
+  contourContinuity:.85,contourBreaks:.08,contourDiversity:.35,contourCrop:.2,contourTurn:6,cellPins:[],
+  multiscale:false,multiscaleSource:'',multiscaleMode:'echo',multiscaleStrength:.9,multiscaleDetail:.8,multiscaleCrossover:2,multiscaleZoom:1,echoLevels:3,echoZoom:1,
+  screenMode:'regular',flowStrength:.65,flowSmoothing:2,flowLength:3,flowDivergence:.7,flowAcrossCells:true,
   rows: 8, columns: 8, sourceRows: 4, sourceColumns: 4, gap: 5, margin: 6,
   background: '#f2efe7', distribution: 'noise', seed: 2408, gradientAngle: 45, noiseScale: 3, chaos: 0.15,
   colorStart: '#214c5d', colorEnd: '#e9a16b', crop: 'random', mask: 'square', scale: 1,
@@ -39,6 +47,9 @@ export const DEFAULTS: Settings = {
   motionGroupSize: 4, motionOverlap: .65, motionDirection: 'forward', motionLoop: true, motionSeedStep: 1,
 };
 export const STARTERS: { name: string; description: string; patch: Partial<Settings>; swatch: string }[] = [
+  { name: 'Image within image', description: 'One image, three magnifications', patch: {multiscale:true,multiscaleMode:'echo',rows:14,columns:14,gap:0,margin:4,multiscaleStrength:1,multiscaleDetail:.65,multiscaleCrossover:1.6}, swatch:'field' },
+  { name: 'Connected landscapes', description: 'Fragments follow their neighbors', patch: {distribution:'contour',rows:9,columns:9,gap:0,contourBreaks:.03}, swatch:'prisms' },
+  { name: 'Contour engraving', description: 'Curved screens follow light and shade', patch: {halftone:true,screenMode:'contour',pattern:'lines',separation:'spot',rows:5,columns:5,gap:0,lpi:16,flowStrength:.75}, swatch:'duo' },
   { name: 'Field notes', description: 'An unexpected landscape', patch: {}, swatch: 'field' },
   { name: 'Soft geometry', description: 'Circular fragments · noise', patch: { mask: 'circle', scaleMode: 'noise', scale: 0.98, variation: 0.6, rows: 9, columns: 9, gap: 8, distribution: 'gradient' }, swatch: 'circles' },
   { name: 'Two-ink study', description: 'Vermilion meets ocean', patch: { halftone: true, separation: 'spot', lpi: 12, rows: 6, columns: 6, mask: 'square', distribution: 'random', gap: 0 }, swatch: 'duo' },
@@ -47,12 +58,16 @@ export const STARTERS: { name: string; description: string; patch: Partial<Setti
 ];
 export const cloneSettings = (s: Settings): Settings => structuredClone(s);
 const enums: Record<string, string[]> = {
+  multiscaleMode:['fragments','echo'],screenMode:['regular','contour'],
   motionPattern: ['sweep','ripple','scatter','flip','slide'], motionGrouping: ['single','grouped','together'], motionDirection: ['forward','reverse'],
-  distribution: ['random','gradient','radial','noise','color','luminance','checkerboard','stripes','ordered'],
+  distribution: ['random','gradient','radial','noise','color','luminance','checkerboard','stripes','ordered','contour'],
   crop: ['random','corresponding','ordered'], mask: ['square','circle','diamond','triangle','hexagon','arch','mixed'],
   scaleMode: ['uniform','random','noise','gradient'], pattern: ['dots','lines','diamonds','squares'], separation: ['cmyk','spot'],
 };
 export const bounds: Record<string, [number, number]> = {
+  contourContinuity:[0,1],contourBreaks:[0,1],contourDiversity:[0,1],contourCrop:[0,.5],contourTurn:[0,20],
+  multiscaleStrength:[0,1],multiscaleDetail:[0,2],multiscaleCrossover:[.3,8],multiscaleZoom:[1,4],echoLevels:[1,5],echoZoom:[1,8],
+  flowStrength:[0,1],flowSmoothing:[.3,8],flowLength:[1,8],flowDivergence:[0,1],
   motionDuration: [.15,3], motionIntensity: [0,1], motionHold: [0,8], motionGroupSize: [2,64], motionOverlap: [0,.9], motionSeedStep: [1,10000],
   rows: [1,80], columns: [1,80], sourceRows: [1,24], sourceColumns: [1,24], gap: [0,50], margin: [0,30],
   seed: [0,2147483647], gradientAngle: [0,360], noiseScale: [0.5,20], chaos: [0,1], scale: [0.1,1.5], variation: [0,1],
@@ -68,11 +83,21 @@ export function normalizeSettings(input: unknown): Settings {
     if (bounds[key]) {
       if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(`Invalid ${key}.`);
       let n = Math.min(bounds[key][1], Math.max(bounds[key][0], v));
-      if (['rows','columns','sourceRows','sourceColumns','seed','dpi','motionGroupSize','motionSeedStep'].includes(key)) n = Math.round(n);
+      if (['rows','columns','sourceRows','sourceColumns','seed','dpi','motionGroupSize','motionSeedStep','echoLevels'].includes(key)) n = Math.round(n);
       (result as unknown as Record<string,unknown>)[key] = n;
     } else if (enums[key]) {
       if (!enums[key].includes(String(v))) throw new Error(`Unknown ${key}.`);
       (result as unknown as Record<string,unknown>)[key] = v;
+    } else if (key === 'multiscaleSource') {
+      if(typeof v!=='string'||v.length>200)throw new Error('Invalid distance image.');
+      result.multiscaleSource=v;
+    } else if (key === 'cellPins') {
+      if(!Array.isArray(v)||v.length>6400)throw new Error('Invalid pinned cells.');
+      result.cellPins=v.map(pin=>{
+        if(!pin||typeof pin.sourceId!=='string'||pin.sourceId.length>200||!Number.isInteger(pin.cell)||pin.cell<0||pin.cell>=6400||!['sx','sy','sw','sh','turn'].every(k=>typeof pin[k]==='number'&&Number.isFinite(pin[k]))||pin.sx<0||pin.sy<0||pin.sw<=0||pin.sh<=0||pin.sx+pin.sw>1.00001||pin.sy+pin.sh>1.00001||Math.abs(pin.turn)>180)throw new Error('Invalid pinned fragment.');
+        return {cell:pin.cell,sourceId:pin.sourceId,sx:pin.sx,sy:pin.sy,sw:pin.sw,sh:pin.sh,turn:pin.turn};
+      });
+      result.cellPins=[...new Map(result.cellPins.map(pin=>[pin.cell,pin])).values()];
     } else if (key === 'selectedIds') {
       if (!Array.isArray(v) || v.some(x => typeof x !== 'string')) throw new Error('Invalid source selection.');
       result.selectedIds = [...new Set(v)];

@@ -11,6 +11,7 @@
     "test:browser": "node tests/browser-check.mjs",
     "test:workflow": "node tests/workflow-check.mjs",
     "test:motion": "node tests/motion-check.mjs && node tests/motion-autoplay-check.mjs",
+    "test:visual": "node tests/visual-render-check.mjs && node tests/visual-systems-check.mjs",
     "deploy": "npm run build && wrangler deploy",
     "deploy:check": "npm run build && wrangler deploy --dry-run"
   },

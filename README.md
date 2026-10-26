@@ -19,7 +19,7 @@ npm test       # engine, screen coverage, recipe validation, independent TIFF de
 npm run preview
 ```
 
-`npm run test:browser` exercises the live UI, preset restoration, responsive layout, and downloads using installed Google Chrome. `npm run test:workflow` also checks every distribution and mask, uploads, backups, imports, custom inks, and full 3000 × 3000 TIFF/PSD decoding. Start the development server on port 5173 first. `npm run test:motion` checks autoplay, live edits, pause/stop opt-out, animation endpoints, caching, looping, controls, persistence, exports, and reduced motion in Chrome. Test artifacts are saved under the system temporary directory.
+`npm run test:browser` exercises the live UI, preset restoration, responsive layout, and downloads using installed Google Chrome. `npm run test:workflow` also checks every distribution and mask, uploads, backups, imports, custom inks, and full 3000 × 3000 TIFF/PSD decoding. Start the development server on port 5173 first. `npm run test:motion` checks autoplay, live edits, pause/stop opt-out, animation endpoints, caching, looping, controls, persistence, exports, and reduced motion in Chrome. `npm run test:visual` checks the new systems together, measures near/far image separation and resolution consistency, and verifies pins, presets, animation, mobile layout, and a combined 300 DPI print package. Test artifacts are saved under the system temporary directory.
 
 ## Hosting on Cloudflare
 
@@ -57,16 +57,32 @@ Hosting shares the application and bundled image library. Uploaded images and pr
 - Select any number of the 25 local Unsplash photographs, or upload/drop JPEG, PNG, WebP, AVIF, or GIF images. Animated files use a still frame. Credits are linked beneath each thumbnail and in [SOURCES.md](SOURCES.md).
 - **Source slicing**, beneath the image library, controls how many rows/columns each source image is cut into. This is independent of the output grid. Fragments cover their cells without distortion.
 - Configure output rows/columns, cell gaps, paper margin/color, and image adjustments.
-- Nine arrangements: random, linear gradient, radial gradient, smooth noise, color selection, luminance, checkerboard, stripes, and sequential. Color and luminance modes choose fragments by their sampled colors; other modes choose images first, then their fragments. Source ordering follows library order.
+- Ten arrangements: connected contours, random, linear gradient, radial gradient, smooth noise, color selection, luminance, checkerboard, stripes, and sequential. Color and luminance modes choose fragments by their sampled colors; other modes choose images first, then their fragments. Source ordering follows library order.
 - Seven mask choices: square, circle, diamond, triangle, hexagon, arch, or a deterministic mixture.
 - Scale cells uniformly, randomly, with coherent noise, or with a gradient. Add rotation, random rotation, and mirroring. Scale above 1 and rotation intentionally permit overlapping cells.
 - The **seed** controls all randomness. Regenerate changes only the seed. Rendering is deterministic for the same recipe and source images (minor rasterization differences between browsers are possible).
+
+## Connected contours
+
+Choose **Compose → Distribution → Connected contours**, or load **Connected landscapes** from Presets. Fragments are chosen using the light/dark profiles and contour crossings along neighboring edges. A bounded, seeded search balances edge continuity, image detail, reuse, and source diversity. Crop freedom and alignment rotation offer alternative crops; alignment rotates the photograph inside its fixed cell, preserving grid boundaries.
+
+**Deliberate breaks** controls how often a cell ignores edge matching. **Source diversity** discourages the same source in neighboring cells. This is an approximate visual solver; it connects compatible photographic structures without recognizing objects or guaranteeing perfect seams. Square masks and small gaps give the strongest connections. Global rotation, mirroring, and scale variation remain available and can break those connections intentionally.
+
+Use **Pin fragments**, then click cells to lock/unlock their crops. Keyboard users can focus the grid, use arrow keys to choose a cell, and press Enter or Space. Pins constrain subsequent contour choices, survive regeneration and preset saves, and are also honored by other arrangements. Changing output grid dimensions releases pins. Pins referencing deselected images are inactive until those images are selected again.
+
+## One image at multiple scales
+
+Load **Presets → Image within image** to start with a continuous 14 × 14 composition. In **Compose → Image at multiple scales**, choose a distance image from the selected sources. **Same image at multiple zoom levels** fills cells with deterministic crops at successive 2× magnifications of that image; **Selected image fragments** uses the normal grid arrangement, including connected contours. Both can be combined with masks and contour screening.
+
+The renderer combines the distance image's broad structures with the grid's fine detail in linear-light RGB. This is baked into the exported pixels. **Distance image strength** sets how strongly the broad image replaces the grid's broad color structure; **Fine detail contrast** controls the retained close-up information. **Crossover scale** sets the spatial filter size as a percentage of the short canvas edge. **Distance image crop** adjusts the large image independently of the near crops. Keep gaps small and fine detail restrained for a clearer distant reading. The effect varies with the source's recognizability and contrast; there is no fixed physical viewing distance.
+
+**Viewing distance** beneath the artwork shrinks the displayed composition from 100% to 20% without changing pixels, presets, or export dimensions. The image controls, crops, and pins are saved in preset versions and backups. If the chosen distance image is deselected, the first selected image is used until that source returns.
 
 ## Presets and backups
 
 The working session autosaves to IndexedDB after a short debounce; wait for **Saved locally** before closing/reloading. Presets contain immutable revisions of all composition/print settings, source IDs, and seed. Restoring a version does not overwrite it; **Save version** appends a revision, and **Save as new preset** branches into a separate preset.
 
-Five starting points are included. **Presets → Backup** exports the current settings, every preset/revision, and uploaded images to JSON. Import merges presets and uploads and loads the supplied working settings. The 25 bundled source images are referenced by stable IDs. Backups are portable between copies of this project. Browser storage is local to the origin and can be cleared by the browser, so keep JSON backups of work you want to retain.
+Eight starting points are included, including Image within image, Connected landscapes, and Contour engraving. **Presets → Backup** exports the current settings, every preset/revision, and uploaded images to JSON. Import merges presets and uploads and loads the supplied working settings. The 25 bundled source images are referenced by stable IDs. Backups are portable between copies of this project. Browser storage is local to the origin and can be cleared by the browser, so keep JSON backups of work you want to retain.
 
 ## Motion
 
@@ -98,6 +114,12 @@ The **Print** tab offers round dots, lines, diamonds, and square screens. Freque
 - Dot gain adjusts intermediate coverage. Plates use a binary screen (black or white) stored in an 8-bit grayscale TIFF for broad compatibility.
 - Hidden inks are omitted from the composite but retained as hidden PSD layers and included in the TIFF plate package.
 
+### Screens that follow image contours
+
+Select **Print → Screen structure → Follow image contours**, or load **Contour engraving**. A smoothed lightness field bends a continuous screen phase through the composition. Lines create curved engraving; dots, diamonds, and squares become elongated marks. This follows light/dark contours rather than semantic object outlines.
+
+**Contour following** sets displacement strength, **Field smoothing** controls the scale of the lightness field, and **Mark length** stretches non-line marks. **Direction difference between inks** blends the inks' screen angles toward a shared direction. Turn off **Flow across cell boundaries** to anchor displacement at each cell boundary. Displacement is bounded using field gradients to limit excessive screen compression. Frequency is nominal: local line spacing changes with image structure. These plates remain binary, separately exportable TIFFs and named PSD layers. Set following to zero to recover the regular screen exactly.
+
 ## Print export
 
 Default: **10 × 10 inches at 300 DPI**, producing **3000 × 3000 pixels**. Width, height, and DPI are configurable. Export is currently capped at **20 megapixels** and 12,000 pixels per side to bound worker memory use. Exports are cancellable and run separately from the preview.
@@ -117,6 +139,10 @@ The composite is an RGB proof, not a CMYK TIFF. There is no embedded ICC profile
 ## Where to iterate
 
 - `src/model.ts`: settings schema, bounds, defaults, and starter recipes.
+- `src/engine/contours.ts`: bounded contour analysis, neighbor matching, and pinned constraints.
+- `src/engine/multiscale.ts` and `analysis.ts`: resolution-independent analysis and linear-light frequency blending.
+- `src/engine/flow.ts`: continuous, image-driven screen displacement.
+- `src/components/VisualSystems.tsx`: controls for contour composition, multi-scale imagery, and contour screens.
 - `src/engine/math.ts`: seeded randomness, continuous noise, CMYK math, and area-normalized screen shapes.
 - `src/engine/render.ts`: source slicing, fragment selection, masks, composition, separation, and proof layers.
 - `src/engine/worker.ts`: shared preview/export pipeline, TIFF plates, layered PSD, ZIP packaging.

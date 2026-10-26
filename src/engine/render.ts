@@ -1,6 +1,11 @@
-import type { Settings, SourceImage, Ink, Mask } from '../model';
+import type { Settings, SourceImage, Ink, Mask, CellPin } from '../model';
 import { random, noise, clamp, rgb, cmyk, screenThreshold } from './math';
-export interface Tile { image: ImageBitmap; sx: number; sy: number; sw: number; sh: number; color: number[]; sourceIndex: number; tileIndex: number }
+import { contourPlan } from './contours';
+import { applyMultiscale } from './multiscale';
+import { buildFlowField, flowDisplacement } from './flow';
+import { drawFragment } from './tile';
+import type { Tile } from './tile';
+export type { Tile } from './tile';
 const cache = new Map<string, Promise<ImageBitmap>>();
 export async function loadSources(sources: SourceImage[]) {
   return Promise.all(sources.map(async source => {
@@ -12,13 +17,13 @@ export async function loadSources(sources: SourceImage[]) {
 export function makeTiles(images: { source: SourceImage; image: ImageBitmap }[], s: Settings): Tile[] {
   const tiles: Tile[] = [], size = 4;
   const canvas = new OffscreenCanvas(s.sourceColumns*size,s.sourceRows*size), ctx=canvas.getContext('2d',{willReadFrequently:true})!;
-  images.forEach(({image},sourceIndex)=>{
+  images.forEach(({image,source},sourceIndex)=>{
     ctx.drawImage(image,0,0,canvas.width,canvas.height);
     const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;
     for(let row=0;row<s.sourceRows;row++)for(let col=0;col<s.sourceColumns;col++) {
       const color=[0,0,0];
       for(let y=0;y<size;y++)for(let x=0;x<size;x++) { const k=((row*size+y)*canvas.width+col*size+x)*4;for(let c=0;c<3;c++)color[c]+=data[k+c]/(size*size); }
-      tiles.push({image,sx:col*image.width/s.sourceColumns,sy:row*image.height/s.sourceRows,sw:image.width/s.sourceColumns,sh:image.height/s.sourceRows,color,sourceIndex,tileIndex:row*s.sourceColumns+col});
+      tiles.push({image,sourceId:source.id,sx:col*image.width/s.sourceColumns,sy:row*image.height/s.sourceRows,sw:image.width/s.sourceColumns,sh:image.height/s.sourceRows,color,sourceIndex,tileIndex:row*s.sourceColumns+col});
     }
   });
   return tiles;
@@ -61,14 +66,34 @@ function maskPath(ctx: OffscreenCanvasRenderingContext2D, mask: Mask, w:number,h
   else ctx.rect(-w/2,-h/2,w,h);
   ctx.closePath();ctx.clip();
 }
-export function renderGrid(tiles: Tile[], s:Settings,width:number,height:number) {
+export function planGrid(tiles:Tile[],s:Settings):Tile[]{
+  if(!tiles.length)return [];
+  const far=tiles.find(t=>t.sourceId===s.multiscaleSource)??tiles[0];
+  const echo=s.multiscale&&s.multiscaleMode==='echo';
+  let plan:Tile[];
+  if(echo){
+    plan=Array.from({length:s.rows*s.columns},(_,i)=>{
+      const level=Math.floor(random(s.seed,i,61)*s.echoLevels),zoom=s.echoZoom*2**level;
+      const sw=far.image.width/zoom,sh=far.image.height/zoom;
+      return {...far,tileIndex:i,sx:(far.image.width-sw)*random(s.seed,i,62),sy:(far.image.height-sh)*random(s.seed,i,63),sw,sh,turn:0};
+    });
+  }else plan=s.distribution==='contour'?contourPlan(tiles,s):Array.from({length:s.rows*s.columns},(_,i)=>chooseTile(tiles,s,Math.floor(i/s.columns),i%s.columns));
+  if(echo&&s.distribution==='contour')plan=contourPlan(plan,s);
+  for(const pin of s.cellPins){
+    const source=tiles.find(t=>t.sourceId===pin.sourceId);
+    if(source&&pin.cell<plan.length)plan[pin.cell]={...source,sx:pin.sx*source.image.width,sy:pin.sy*source.image.height,sw:pin.sw*source.image.width,sh:pin.sh*source.image.height,turn:pin.turn};
+  }
+  return plan;
+}
+export function describePlan(plan:Tile[]):CellPin[]{return plan.map((t,cell)=>({cell,sourceId:t.sourceId??'',sx:t.sx/t.image.width,sy:t.sy/t.image.height,sw:t.sw/t.image.width,sh:t.sh/t.image.height,turn:t.turn??0}));}
+export function renderGrid(tiles: Tile[], s:Settings,width:number,height:number,plan=planGrid(tiles,s)) {
   const canvas=new OffscreenCanvas(width,height),ctx=canvas.getContext('2d',{willReadFrequently:true})!;
-  ctx.fillStyle=s.background;ctx.fillRect(0,0,width,height);
+  if(!s.multiscale){ctx.fillStyle=s.background;ctx.fillRect(0,0,width,height);}
   if(!tiles.length)return canvas;
   const margin=Math.min(width,height)*s.margin/100,cw=(width-margin*2)/s.columns,ch=(height-margin*2)/s.rows;
   ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.filter=`saturate(${s.saturation}) contrast(${s.contrast})`;
   for(let row=0;row<s.rows;row++)for(let col=0;col<s.columns;col++) {
-    const i=row*s.columns+col,x=(col+.5)/s.columns,y=(row+.5)/s.rows,tile=chooseTile(tiles,s,row,col);
+    const i=row*s.columns+col,x=(col+.5)/s.columns,y=(row+.5)/s.rows,tile=plan[i];
     const factor=s.scaleMode==='random'?random(s.seed,i,2):s.scaleMode==='noise'?noise(x*s.noiseScale,y*s.noiseScale,s.seed+55):s.scaleMode==='gradient'?gradient(x,y,s.gradientAngle):1;
     const scale=s.scale*(1-s.variation*(1-factor));
     const w=cw*(1-s.gap/100)*scale,h=ch*(1-s.gap/100)*scale;
@@ -78,9 +103,9 @@ export function renderGrid(tiles: Tile[], s:Settings,width:number,height:number)
     const masks:Mask[]=['square','circle','diamond','triangle','hexagon','arch'];
     maskPath(ctx,s.mask==='mixed'?masks[Math.floor(random(s.seed,i,9)*masks.length)]:s.mask,w,h);
     // Cover the output cell without distorting the selected source slice.
-    const ratio=Math.max(w/tile.sw,h/tile.sh),sw=w/ratio,sh=h/ratio;
-    ctx.drawImage(tile.image,tile.sx+(tile.sw-sw)/2,tile.sy+(tile.sh-sh)/2,sw,sh,-w/2,-h/2,w,h);ctx.restore();
+    drawFragment(ctx,tile,w,h);ctx.restore();
   }
+  if(s.multiscale){const far=tiles.find(t=>t.sourceId===s.multiscaleSource)??tiles[0];applyMultiscale(canvas,far.image,s);}
   return canvas;
 }
 export interface Plate { ink: Ink; coverage: Uint8Array }
@@ -89,9 +114,11 @@ export function separate(image:ImageData,s:Settings):Plate[] {
   const plates=inks.map(ink=>({ink,coverage:new Uint8Array(image.width*image.height)}));
   const colors=inks.map(ink=>rgb(ink.color).map(v=>v/255));
   const spacing=image.width/(s.width*s.lpi);
-  const angles=inks.map(ink=>{const a=ink.angle*Math.PI/180;return [Math.cos(a)/spacing,Math.sin(a)/spacing];});
+  const flow=s.screenMode==='contour'&&s.flowStrength>0?buildFlowField(image,s):null;
+  const angles=inks.map(ink=>{const a=ink.angle*(flow?s.flowDivergence:1)*Math.PI/180;return [Math.cos(a)/spacing,Math.sin(a)/spacing];});
   for(let y=0;y<image.height;y++)for(let x=0;x<image.width;x++) {
     const p=y*image.width+x,k=p*4,r=image.data[k]/255,g=image.data[k+1]/255,b=image.data[k+2]/255;
+    const displacement=flow?flowDisplacement(flow,(x+.5)/image.width,(y+.5)/image.height,s):0;
     let tones:number[];
     if(s.separation==='cmyk')tones=cmyk(r,g,b,s.blackGeneration);
     else {
@@ -102,7 +129,7 @@ export function separate(image:ImageData,s:Settings):Plate[] {
     }
     for(let c=0;c<inks.length;c++) {
       const raw=tones[c],tone=clamp((raw+s.gain*4*raw*(1-raw))*inks[c].density),[cos,sin]=angles[c];
-      plates[c].coverage[p]=tone>screenThreshold((x+.5)*cos+(y+.5)*sin,-(x+.5)*sin+(y+.5)*cos,s.pattern)?255:0;
+      plates[c].coverage[p]=tone>screenThreshold((x+.5)*cos+(y+.5)*sin+displacement,(-(x+.5)*sin+(y+.5)*cos)/(flow?s.flowLength:1),s.pattern)?255:0;
     }
   }
   return plates;
