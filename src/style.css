@@ -71,3 +71,13 @@
 .source-positions{border-top:1px solid var(--border);padding-top:16px;margin-top:18px}.source-positions h3{font-size:11px;font-weight:500;margin:0 0 14px}.seed-button{display:block;margin:8px 0 0 auto;background:none;border:0;padding:3px 0;color:var(--muted);font:inherit;font-size:10px;cursor:pointer}.seed-button:hover{color:var(--dark)}
 
 .starter-swatch.portrait{background:url(/images/thumbs/h1zwnZNp1fI.jpg) center 35%/cover}
+
+/* Complementary collages share one recipe and remain visible together. */
+.complement-wrap[hidden]{display:none}
+.stage.paired-stage{gap:28px;padding:28px 30px 38px}
+.paired-stage .artboard-wrap{width:min(calc((100% - 28px)/2),calc((100cqh - 72px)*var(--art-ratio)))}
+@media(max-width:680px){
+  .stage-panel:has(.paired-stage){height:auto;min-height:0}
+  .stage.paired-stage{container-type:inline-size;flex:none;flex-direction:column;gap:52px;padding:36px 35px 48px;overflow:visible}
+  .paired-stage .artboard-wrap{width:100%}
+}

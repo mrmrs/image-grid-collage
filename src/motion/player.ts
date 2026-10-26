@@ -6,7 +6,13 @@ export type MotionPhase='idle'|'preparing'|'playing'|'paused';
 export interface MotionState { phase:MotionPhase; visible:boolean; iteration:number; fromSeed:number; toSeed:number }
 export const IDLE_MOTION:MotionState={phase:'idle',visible:false,iteration:0,fromSeed:0,toSeed:0};
 
-/** Owns exactly two rendered frames and shares the preview worker’s decoded image cache. Frame ticks never update React or persist settings. */
+interface RenderedFrame {
+  bitmap:ImageBitmap;
+  complement?:ImageBitmap;
+  close:()=>void;
+}
+
+/** Owns exactly two rendered variations and shares the preview worker’s decoded image cache. Frame ticks never update React or persist settings. */
 export class GridMotionPlayer {
   private settings!:Settings;
   private sources:SourceImage[]=[];
@@ -15,9 +21,9 @@ export class GridMotionPlayer {
   private worker?:Worker;
   private requestId=0;
   private generation=0;
-  private pending=new Map<number,{resolve:(image:ImageBitmap)=>void;reject:(reason:Error)=>void}>();
-  private from?:ImageBitmap;
-  private to?:ImageBitmap;
+  private pending=new Map<number,{resolve:(image:RenderedFrame)=>void;reject:(reason:Error)=>void}>();
+  private from?:RenderedFrame;
+  private to?:RenderedFrame;
   private starts:Float64Array=new Float64Array();
   private elapsed=0;
   private frame=0;
@@ -28,7 +34,7 @@ export class GridMotionPlayer {
   private state:MotionState={...IDLE_MOTION};
   reduced=false;
 
-  constructor(private canvas:HTMLCanvasElement,private onState:(state:MotionState)=>void,private onProgress:(progress:number)=>void,private onError:(message:string)=>void,private getWorker:()=>Worker|null){}
+  constructor(private canvas:HTMLCanvasElement,private onState:(state:MotionState)=>void,private onProgress:(progress:number)=>void,private onError:(message:string)=>void,private getWorker:()=>Worker|null,private getComplementCanvas:()=>HTMLCanvasElement|null=()=>null){}
   configure(s:Settings,sources:SourceImage[],solo:number){
     const key=artworkKey(s)+':'+solo+':'+s.motionSeedStep;
     const sourceChanged=sources.length!==this.sources.length||sources.some((source,i)=>source!==this.sources[i]);
@@ -45,7 +51,7 @@ export class GridMotionPlayer {
     return changed;
   }
   private publish(patch:Partial<MotionState>){this.state={...this.state,...patch};if(!this.disposed)this.onState(this.state);}
-  private render(seed:number):Promise<ImageBitmap>{
+  private render(seed:number):Promise<RenderedFrame>{
     const worker=this.getWorker();
     if(!worker)return Promise.reject(new Error('Preview worker is not ready.'));
     if(this.worker!==worker){
@@ -66,9 +72,12 @@ export class GridMotionPlayer {
   private handleMessage=(event:MessageEvent)=>{
     if(event.data.id>=0)return;
     const job=this.pending.get(event.data.id);
-    if(!job){event.data.bitmap?.close();return;}
+    if(!job){event.data.bitmap?.close();event.data.complement?.close();return;}
     this.pending.delete(event.data.id);
-    if(event.data.error)job.reject(new Error(event.data.error));else job.resolve(event.data.bitmap);
+    if(event.data.error)job.reject(new Error(event.data.error));else {
+      const {bitmap,complement}=event.data;
+      job.resolve({bitmap,complement,close:()=>{bitmap.close();complement?.close();}});
+    }
   };
   private handleError=(event:ErrorEvent)=>{
     for(const job of this.pending.values())job.reject(new Error(event.message||'Motion worker failed'));
@@ -87,7 +96,9 @@ export class GridMotionPlayer {
     try{
       const from=await this.render(this.state.fromSeed);
       if(gen!==this.generation){from.close();return;}this.from=from;
-      this.canvas.width=from.width;this.canvas.height=from.height;
+      this.canvas.width=from.bitmap.width;this.canvas.height=from.bitmap.height;
+      const complementCanvas=this.getComplementCanvas();
+      if(complementCanvas&&from.complement){complementCanvas.width=from.complement.width;complementCanvas.height=from.complement.height;}
       const to=await this.render(this.state.toSeed);
       if(gen!==this.generation){to.close();return;}this.to=to;
       this.elapsed=0;this.starts=cellSchedule(this.settings,this.state.fromSeed);this.paint();
@@ -125,7 +136,9 @@ export class GridMotionPlayer {
   };
   private paint(){
     if(!this.from||!this.to)return;
-    drawTransition(this.canvas,this.from,this.to,this.settings,this.starts,this.elapsed,this.reduced);
+    drawTransition(this.canvas,this.from.bitmap,this.to.bitmap,this.settings,this.starts,this.elapsed,this.reduced);
+    const complementCanvas=this.getComplementCanvas();
+    if(complementCanvas&&this.from.complement&&this.to.complement)drawTransition(complementCanvas,this.from.complement,this.to.complement,this.settings,this.starts,this.elapsed,this.reduced);
     this.onProgress(Math.min(1,this.elapsed/motionTiming(this.settings).duration));
   }
   pause(){

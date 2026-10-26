@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import UTIF from 'utif';
 import { encodeTiff } from '../src/engine/tiff';
 import { random, noise, cmyk, screenThreshold } from '../src/engine/math';
-import { DEFAULTS, cloneSettings, normalizeSettings, exportDimensions } from '../src/model';
-import { chooseTile } from '../src/engine/render';
+import { DEFAULTS, cloneSettings, normalizeSettings, exportDimensions, hasComplementaryOutput } from '../src/model';
+import { chooseTile, planGrid } from '../src/engine/render';
 import type { Tile } from '../src/engine/render';
 describe('print export',()=>{
   it.each([72,300,600])('encodes RGB pixels and %i DPI tags readable by an independent TIFF decoder',dpi=>{
@@ -51,6 +51,25 @@ describe('reconstructed image weave',()=>{
       expect(tile.sw).toBeCloseTo(800/columns);expect(tile.sh).toBeCloseTo(800/rows);
       expect(chooseTile(otherTiles,{...s,sourceRows:2,sourceColumns:3},row,col)).toEqual(tile);
     }
+  });
+  it.each([[12,12],[3,5],[1,12],[12,1]])('uses every source fragment exactly once across a %i × %i pair', (rows,columns)=>{
+    const s={...cloneSettings(DEFAULTS),rows,columns},tiles=tilesFor(4,4);
+    const first=planGrid(tiles,s),second=planGrid(tiles,s,1);
+    const fragments=new Set<string>();
+    for(let i=0;i<first.length;i++){
+      expect(first[i].sourceIndex).not.toBe(second[i].sourceIndex);
+      for(const tile of [first[i],second[i]])fragments.add(`${tile.sourceIndex}:${tile.sx}:${tile.sy}`);
+    }
+    expect(fragments.size).toBe(2*rows*columns);
+    for(const sourceIndex of [0,1])expect([...first,...second].filter(t=>t.sourceIndex===sourceIndex)).toHaveLength(rows*columns);
+  });
+  it('only pairs two reconstructed alternating images',()=>{
+    expect(hasComplementaryOutput(DEFAULTS,2)).toBe(true);
+    for(const count of [0,1,3])expect(hasComplementaryOutput(DEFAULTS,count)).toBe(false);
+    expect(hasComplementaryOutput({...DEFAULTS,crop:'random'},2)).toBe(false);
+    expect(hasComplementaryOutput({...DEFAULTS,distribution:'random'},2)).toBe(false);
+    expect(hasComplementaryOutput({...DEFAULTS,multiscale:true,multiscaleMode:'echo'},2)).toBe(false);
+    expect(hasComplementaryOutput({...DEFAULTS,multiscale:true,multiscaleMode:'fragments'},2)).toBe(true);
   });
   it('covers a rectangular print once, allowing for its border',()=>{
     const s={...cloneSettings(DEFAULTS),width:12,height:6,margin:10,rows:2,columns:4};

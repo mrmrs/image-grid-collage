@@ -25,15 +25,17 @@ try{
   // Independent reference: cover each photograph once and reveal alternating rectangles.
   const weaveErrors=[];
   for(const [rows,columns,width,height] of [[12,12,600,600],[3,5,900,600],[1,12,600,600],[12,1,600,600]]){
+   for(const output of [0,1]){
    const s={...DEFAULTS,rows,columns,width:width/100,height:height/100,margin:0};
-   const output=renderGrid(tiles,s,width,height),reference=new OffscreenCanvas(width,height),ctx=reference.getContext('2d');
+   const outputCanvas=renderGrid(tiles,s,width,height,planGrid(tiles,s,output)),reference=new OffscreenCanvas(width,height),ctx=reference.getContext('2d');
    ctx.imageSmoothingQuality='high';
    for(let row=0;row<rows;row++)for(let col=0;col<columns;col++){
-    const image=images[(row+col)%2].image,scale=Math.max(width/image.width,height/image.height);
+    const image=images[(row+col+output)%2].image,scale=Math.max(width/image.width,height/image.height);
     ctx.save();ctx.beginPath();ctx.rect(col*width/columns,row*height/rows,width/columns,height/rows);ctx.clip();
     ctx.drawImage(image,(width-image.width*scale)/2,(height-image.height*scale)/2,image.width*scale,image.height*scale);ctx.restore();
    }
-   weaveErrors.push(rmse(sample(output,300),sample(reference,300)));
+   weaveErrors.push(rmse(sample(outputCanvas,300),sample(reference,300)));
+   }
   }
   const flat=new OffscreenCanvas(64,64),fc=flat.getContext('2d');fc.fillStyle='rgb(100,140,180)';fc.fillRect(0,0,64,64);
   const flatTiles=makeTiles([{source:{id:'flat'},image:await createImageBitmap(flat)}],settings);

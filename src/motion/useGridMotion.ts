@@ -4,7 +4,7 @@ import type { Settings, SourceImage } from '../model';
 import { GridMotionPlayer, IDLE_MOTION } from './player';
 
 export function useGridMotion(settings:Settings,sources:SourceImage[],solo:number,worker:RefObject<Worker|null>,onError:(message:string)=>void,active:boolean){
-  const canvasRef=useRef<HTMLCanvasElement>(null),scrubRef=useRef<HTMLInputElement>(null),percentRef=useRef<HTMLSpanElement>(null);
+  const canvasRef=useRef<HTMLCanvasElement>(null),complementRef=useRef<HTMLCanvasElement>(null),scrubRef=useRef<HTMLInputElement>(null),percentRef=useRef<HTMLSpanElement>(null);
   const playerRef=useRef<GridMotionPlayer|null>(null);
   // Playback intent survives recipe changes and temporary interruptions, but is not saved in presets.
   const autoplay=useRef(true);
@@ -16,7 +16,7 @@ export function useGridMotion(settings:Settings,sources:SourceImage[],solo:numbe
     const player=new GridMotionPlayer(canvasRef.current!,setState,p=>{
       if(scrubRef.current){scrubRef.current.value=String(p*100);scrubRef.current.style.setProperty('--fill',`${p*100}%`);}
       if(percentRef.current)percentRef.current.textContent=`${Math.round(p*100)}%`;
-    },message=>{autoplay.current=false;errorRef.current(message);},()=>worker.current);
+    },message=>{autoplay.current=false;errorRef.current(message);},()=>worker.current,()=>complementRef.current);
     playerRef.current=player;
     const query=matchMedia('(prefers-reduced-motion: reduce)');
     const preference=()=>{player.reduced=query.matches;setReduced(query.matches);};preference();
@@ -36,7 +36,7 @@ export function useGridMotion(settings:Settings,sources:SourceImage[],solo:numbe
     return()=>clearTimeout(timer);
   },[settings,sources,solo,active,hidden]);
   const pause=()=>{autoplay.current=false;playerRef.current?.pause();};
-  return {state,canvasRef,scrubRef,percentRef,reduced,
+  return {state,canvasRef,complementRef,scrubRef,percentRef,reduced,
     toggle:()=>{if(state.phase==='playing'||state.phase==='preparing')pause();else{autoplay.current=true;void playerRef.current?.play();}},
     step:()=>{autoplay.current=false;void playerRef.current?.play(true);},
     pause,stop:()=>{autoplay.current=false;playerRef.current?.stop();},restart:()=>{autoplay.current=true;playerRef.current?.restart();},

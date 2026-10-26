@@ -65,7 +65,7 @@ const classicStarters: { name: string; description: string; patch: Partial<Setti
   { name: 'Press proof', description: 'Four-color dot screen', patch: { halftone: true, separation: 'cmyk', lpi: 22, rows: 5, columns: 5, gap: 3, distribution: 'ordered' }, swatch: 'press' },
 ];
 export const STARTERS = [
-  {name:'Image weave',description:'Two images · matching fragments · 12 × 12',patch:{...DEFAULTS},swatch:'field'},
+  {name:'Image weave',description:'Two images · two collages · 12 × 12',patch:{...DEFAULTS},swatch:'field'},
   ...classicStarters.map(starter=>({...starter,patch:{rows:8,columns:8,gap:5,margin:6,distribution:'noise' as const,chaos:.15,crop:'random' as const,...starter.patch}})),
 ];
 export const cloneSettings = (s: Settings): Settings => structuredClone(s);
@@ -143,4 +143,9 @@ export function exportDimensions(s: Settings) {
   // Bounded because a package holds RGBA layers, TIFFs, PSD data and zip buffers at once.
   if (width * height > 20_000_000 || width > 12000 || height > 12000) throw new Error('Export exceeds 20 megapixels. Reduce print size or DPI.');
   return { width, height };
+}
+
+/** Two reconstructed, alternating sources form a complementary pair. */
+export function hasComplementaryOutput(s:Settings,sourceCount:number){
+  return sourceCount===2&&s.crop==='reconstruct'&&s.distribution==='checkerboard'&&(!s.multiscale||s.multiscaleMode==='fragments');
 }

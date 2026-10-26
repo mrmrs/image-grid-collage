@@ -29,7 +29,7 @@ export function makeTiles(images: { source: SourceImage; image: ImageBitmap }[],
   return tiles;
 }
 function gradient(x:number,y:number,angle:number) { const a=angle*Math.PI/180, c=Math.cos(a),s=Math.sin(a);return clamp(.5+((x-.5)*c+(y-.5)*s)/(Math.abs(c)+Math.abs(s))); }
-export function chooseTile(tiles: Tile[], s: Settings, row: number, col: number): Tile {
+export function chooseTile(tiles: Tile[], s: Settings, row: number, col: number, sourceOffset=0): Tile {
   const index=row*s.columns+col, x=(col+.5)/s.columns,y=(row+.5)/s.rows, n=s.sourceRows*s.sourceColumns;
   const count=tiles.length/n, r=random(s.seed,index), grad=gradient(x,y,s.gradientAngle);
   let t=r, sourceIndex=0;
@@ -52,7 +52,7 @@ export function chooseTile(tiles: Tile[], s: Settings, row: number, col: number)
     }
   }
   if(s.distribution!=='random')t=clamp(t+(random(s.seed,index,6)-.5)*s.chaos);
-  sourceIndex=Math.min(count-1,Math.floor(t*count));
+  sourceIndex=(Math.min(count-1,Math.floor(t*count))+sourceOffset)%count;
   if(s.crop==='reconstruct') {
     const tile=tiles[sourceIndex*n],image=tile.image;
     // Cover the entire composition once, then slice that crop into matching cells.
@@ -76,17 +76,18 @@ function maskPath(ctx: OffscreenCanvasRenderingContext2D, mask: Mask, w:number,h
   else ctx.rect(-w/2,-h/2,w,h);
   ctx.closePath();ctx.clip();
 }
-export function planGrid(tiles:Tile[],s:Settings):Tile[]{
+export function planGrid(tiles:Tile[],s:Settings,sourceOffset=0):Tile[]{
   if(!tiles.length)return [];
   let plan:Tile[];
   if(s.multiscale&&s.multiscaleMode==='echo'){
     const source=tiles.find(t=>t.sourceId===s.multiscaleSource)??tiles[0];
     const whole={...source,sx:0,sy:0,sw:source.image.width,sh:source.image.height,turn:0};
     plan=Array.from({length:s.rows*s.columns},()=>whole);
-  }else plan=s.distribution==='contour'?contourPlan(tiles,s):Array.from({length:s.rows*s.columns},(_,i)=>chooseTile(tiles,s,Math.floor(i/s.columns),i%s.columns));
+  }else plan=s.distribution==='contour'?contourPlan(tiles,s):Array.from({length:s.rows*s.columns},(_,i)=>chooseTile(tiles,s,Math.floor(i/s.columns),i%s.columns,sourceOffset));
   if(s.multiscale){const magnifications=zoomGrid(s);plan=plan.map((tile,i)=>zoomTile(tile,magnifications[i],s,Math.floor(i/s.columns),i%s.columns));}
   for(const pin of s.cellPins){
-    const source=tiles.find(t=>t.sourceId===pin.sourceId);
+    const pinned=tiles.find(t=>t.sourceId===pin.sourceId);
+    const source=pinned&&sourceOffset?tiles[((pinned.sourceIndex+sourceOffset)%(tiles.length/(s.sourceRows*s.sourceColumns)))*s.sourceRows*s.sourceColumns]:pinned;
     if(source&&pin.cell<plan.length)plan[pin.cell]={...source,sx:pin.sx*source.image.width,sy:pin.sy*source.image.height,sw:pin.sw*source.image.width,sh:pin.sh*source.image.height,turn:pin.turn};
   }
   return plan;
